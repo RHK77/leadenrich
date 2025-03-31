@@ -24,22 +24,22 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="border-b bg-white">
+    <nav className="border-b border-gray-200 bg-white">
       <div className="container mx-auto flex items-center justify-between py-4">
         <div className="flex items-center">
-          <Link to="/" className="text-xl font-bold text-primary">
+          <Link to="/" className="text-xl font-bold text-black">
             LeadEnrich
           </Link>
         </div>
 
         <div className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-sm font-medium hover:text-primary">
+          <Link to="/" className="text-sm font-medium text-gray-600 hover:text-black">
             Home
           </Link>
-          <Link to="/features" className="text-sm font-medium hover:text-primary">
+          <Link to="/features" className="text-sm font-medium text-gray-600 hover:text-black">
             Features
           </Link>
-          <Link to="/pricing" className="text-sm font-medium hover:text-primary">
+          <Link to="/pricing" className="text-sm font-medium text-gray-600 hover:text-black">
             Pricing
           </Link>
         </div>
@@ -50,16 +50,16 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative"
+                className="relative text-gray-600 hover:text-black"
                 onClick={() => toast.info("No new notifications")}
               >
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-destructive rounded-full"></span>
+                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
               </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
+                  <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-black">
                     <User className="h-5 w-5" />
                     <span className="hidden sm:inline">Account</span>
                     <ChevronDown className="h-4 w-4" />
@@ -86,16 +86,21 @@ const Navbar = () => {
             <>
               <Button
                 variant="ghost"
-                className="hidden md:flex"
+                className="hidden md:flex text-gray-600 hover:text-black"
                 onClick={() => navigate("/login")}
               >
                 Log in
               </Button>
-              <Button onClick={() => navigate("/signup")}>Sign up</Button>
+              <Button 
+                onClick={() => navigate("/signup")}
+                className="bg-black hover:bg-gray-800 text-white"
+              >
+                Sign up
+              </Button>
             </>
           )}
           
-          <Button variant="ghost" size="icon" className="md:hidden">
+          <Button variant="ghost" size="icon" className="md:hidden text-gray-600 hover:text-black">
             <Menu className="h-5 w-5" />
           </Button>
         </div>
