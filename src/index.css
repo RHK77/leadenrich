@@ -49,6 +49,14 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Gold accent */
+    --gold: 43 74% 49%;
+    --gold-foreground: 0 0% 100%;
+    
+    /* Silver accent */
+    --silver: 240 6% 87%;
+    --silver-foreground: 240 5.9% 10%;
   }
 
   .dark {
@@ -83,6 +91,14 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Gold accent */
+    --gold: 35 91% 52%;
+    --gold-foreground: 0 0% 0%;
+    
+    /* Silver accent */
+    --silver: 240 9% 75%;
+    --silver-foreground: 240 5.9% 10%;
   }
 }
 
@@ -111,5 +127,48 @@
 
   .step-desc {
     @apply text-sm text-muted-foreground;
+  }
+  
+  /* 3D Effect Animation */
+  .feature-card {
+    @apply transition-all duration-300 will-change-transform;
+    transform-style: preserve-3d;
+  }
+  
+  .card-shine {
+    @apply absolute inset-0 w-full h-full opacity-0 pointer-events-none transition-opacity duration-500;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 80%);
+  }
+  
+  .feature-card:hover .card-shine {
+    @apply opacity-100;
+  }
+  
+  /* Grid Animation */
+  .grid-animation {
+    @apply absolute inset-0 overflow-hidden;
+    background-size: 30px 30px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    animation: grid-move 20s linear infinite;
+  }
+  
+  @keyframes grid-move {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 30px 30px;
+    }
+  }
+  
+  /* Button animations */
+  .btn-gold {
+    @apply bg-[hsl(var(--gold))] text-[hsl(var(--gold-foreground))] hover:bg-[hsl(var(--gold))] hover:brightness-110;
+  }
+  
+  .btn-silver {
+    @apply bg-[hsl(var(--silver))] text-[hsl(var(--silver-foreground))] hover:bg-[hsl(var(--silver))] hover:brightness-110;
   }
 }
