@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -58,13 +57,11 @@ const Features = () => {
         }
       }
       
-      // Reset inactivity timer
       setLastInteraction(Date.now());
     };
     
     document.addEventListener('mousemove', handleMouseMove);
     
-    // Check if timer should be active (based on localStorage)
     const shouldActivate = localStorage.getItem("specialOfferSeen") !== "true";
     if (shouldActivate) {
       setTimerActive(true);
@@ -75,7 +72,6 @@ const Features = () => {
     };
   }, []);
   
-  // Timer effect for promotional offer
   useEffect(() => {
     let timer: number | null = null;
     
@@ -94,14 +90,11 @@ const Features = () => {
     };
   }, [timerActive, timeLeft]);
   
-  // Inactivity tracker
   useEffect(() => {
-    // Check for inactivity every second
     const checkInactivity = () => {
       const now = Date.now();
       const inactiveTime = now - lastInteraction;
       
-      // If inactive for 30 seconds and not showing popup already
       if (inactiveTime > 30000 && !showAbandonmentPopup) {
         setShowAbandonmentPopup(true);
       }
@@ -238,7 +231,6 @@ const Features = () => {
         </div>
       </main>
       
-      {/* Abandonment Popup */}
       <Dialog open={showAbandonmentPopup} onOpenChange={setShowAbandonmentPopup}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -304,8 +296,7 @@ const FeatureCard = ({
         <p className="text-gray-600 mb-4">{description}</p>
         <div className="mt-auto">
           <Button 
-            variant="link" 
-            className="text-black hover:text-gray-700 p-0"
+            className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-md"
           >
             Learn more →
           </Button>

@@ -167,7 +167,7 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({
               ))}
             </ul>
             
-            <div className="flex gap-4 mt-8">
+            <div className="flex flex-col sm:flex-row gap-4 mt-8">
               <Button
                 size="lg"
                 className="bg-black hover:bg-gray-800 text-white"
@@ -228,6 +228,12 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({
               <CardContent className="pt-6">
                 <h3 className="text-xl font-bold mb-2 text-black">{useCase.title}</h3>
                 <p className="text-gray-600">{useCase.description}</p>
+                <Button 
+                  className="mt-4 bg-black hover:bg-gray-800 text-white"
+                  onClick={handleSignUpSpecial}
+                >
+                  Start Using This Feature
+                </Button>
               </CardContent>
             </Card>
           ))}

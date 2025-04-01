@@ -75,7 +75,7 @@ const LoginForm = () => {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-black text-white hover:bg-gray-800" disabled={isLoading}>
             {isLoading ? "Logging in..." : "Log in"}
           </Button>
         </form>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Mail, FileUp } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignUpForm = () => {
   const [email, setEmail] = useState("");
@@ -15,6 +16,7 @@ const SignUpForm = () => {
   const [company, setCompany] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signup } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,45 +28,35 @@ const SignUpForm = () => {
     
     setIsLoading(true);
     
-    // Simulating registration
-    setTimeout(() => {
-      setIsLoading(false);
-      localStorage.setItem("isLoggedIn", "true");
-      
-      // Store user data with free trial info
-      const userData = {
-        name,
-        email,
-        company: company || undefined,
-        leadsRemaining: 10,
-        isPremium: false
-      };
-      localStorage.setItem("userData", JSON.stringify(userData));
-      
-      toast.success("Account created successfully! You have 10 free leads to start.");
+    try {
+      await signup(name, email, password, company);
       navigate("/dashboard");
-    }, 1000);
+    } catch (error) {
+      toast.error("Sign up failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialSignup = (provider: string) => {
     setIsLoading(true);
     
-    // Simulate social authentication
+    // Simulate social authentication since we don't have actual providers
     setTimeout(() => {
       setIsLoading(false);
-      localStorage.setItem("isLoggedIn", "true");
       
-      // Store default user data with free trial info
-      const userData = {
-        name: "User",
-        email: "user@example.com",
-        leadsRemaining: 10,
-        isPremium: false
-      };
-      localStorage.setItem("userData", JSON.stringify(userData));
+      // Generate a random name based on the provider
+      const randomName = `${provider}User${Math.floor(Math.random() * 1000)}`;
+      const randomEmail = `${randomName.toLowerCase()}@example.com`;
       
-      toast.success(`Signed up with ${provider}! You have 10 free leads to start.`);
-      navigate("/dashboard");
+      // Use the auth context to sign up
+      signup(randomName, randomEmail, "password123", "")
+        .then(() => {
+          navigate("/dashboard");
+        })
+        .catch(() => {
+          toast.error(`Sign up with ${provider} failed. Please try again.`);
+        });
     }, 1000);
   };
 
@@ -186,7 +178,7 @@ const SignUpForm = () => {
             </div>
           </div>
           
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-black hover:bg-gray-800 text-white" disabled={isLoading}>
             {isLoading ? "Creating account..." : "Create Account"}
           </Button>
         </form>
