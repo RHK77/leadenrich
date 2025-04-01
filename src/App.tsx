@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -23,16 +23,6 @@ import ExportOptionsFeature from "./pages/ExportOptionsFeature";
 
 const queryClient = new QueryClient();
 
-// Routes that need authentication
-const ProtectedRoutes = () => {
-  return <Outlet />;
-};
-
-// Routes that need AuthContext but don't require authentication
-const AuthRoutes = () => {
-  return <Outlet />;
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -42,13 +32,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
-            
-            {/* Auth routes (Login, Signup) */}
-            <Route element={<AuthRoutes />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-            </Route>
-            
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/features" element={<Features />} />
             <Route path="/pricing" element={<PricingPlans />} />
             
@@ -60,10 +45,8 @@ const App = () => (
             <Route path="/feature/free-trial" element={<FreeTrialFeature />} />
             <Route path="/feature/export-options" element={<ExportOptionsFeature />} />
             
-            {/* Protected routes */}
-            <Route element={<ProtectedRoutes />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-            </Route>
+            {/* Dashboard - removed nested routing to simplify */}
+            <Route path="/dashboard" element={<Dashboard />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

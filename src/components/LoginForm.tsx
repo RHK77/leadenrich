@@ -26,6 +26,7 @@ const LoginForm = () => {
     
     try {
       await login(email, password);
+      toast.success("Login successful!");
       navigate("/dashboard");
     } catch (error) {
       toast.error("Login failed. Please try again.");

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,14 +11,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, User, Bell, Settings, LogOut, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("isLoggedIn") === "true");
+  const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    setIsLoggedIn(false);
+    logout();
     toast.success("Logged out successfully");
     navigate("/");
   };
@@ -45,7 +45,7 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <>
               <Button
                 variant="ghost"
@@ -61,7 +61,7 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-2 text-gray-600 hover:text-black">
                     <User className="h-5 w-5" />
-                    <span className="hidden sm:inline">Account</span>
+                    <span className="hidden sm:inline">{user?.name || 'Account'}</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

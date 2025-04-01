@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type User = {
@@ -26,27 +25,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for existing login
+    // Check for existing login on component mount
     const checkAuth = () => {
       const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
       if (isLoggedIn) {
         // Try to get user data from localStorage
         const userData = localStorage.getItem("userData");
         if (userData) {
-          setUser(JSON.parse(userData));
+          try {
+            setUser(JSON.parse(userData));
+            setIsAuthenticated(true);
+          } catch (e) {
+            // Handle JSON parse error
+            localStorage.removeItem("userData");
+            localStorage.removeItem("isLoggedIn");
+          }
         } else {
-          // Default user data if logged in but no user data
-          setUser({
-            email: "user@example.com",
-            name: "User",
-            leadsRemaining: 10,
-            isPremium: false
-          });
+          // No user data found but logged in flag is true, log the user out
+          localStorage.removeItem("isLoggedIn");
         }
-        setIsAuthenticated(true);
       }
     };
     
@@ -54,47 +53,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulating authentication
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        const userData = {
-          email,
-          name: email.split('@')[0],
-          leadsRemaining: 10,
-          isPremium: false
-        };
+    // Simulated login - no actual authentication, just for demo purposes
+    return new Promise<void>((resolve, reject) => {
+      try {
+        // Simple validation
+        if (!email.includes('@')) {
+          throw new Error('Invalid email format');
+        }
         
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userData", JSON.stringify(userData));
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters');
+        }
         
-        toast.success("Login successful!");
-        resolve();
-      }, 1000);
+        setTimeout(() => {
+          const userData = {
+            email,
+            name: email.split('@')[0], // Simple name extraction
+            leadsRemaining: 10,
+            isPremium: false
+          };
+          
+          setUser(userData);
+          setIsAuthenticated(true);
+          localStorage.setItem("isLoggedIn", "true");
+          localStorage.setItem("userData", JSON.stringify(userData));
+          
+          resolve();
+        }, 800); // Simulate network delay
+      } catch (error) {
+        reject(error);
+      }
     });
   };
 
   const signup = async (name: string, email: string, password: string, company?: string) => {
-    // Simulating signup
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        const userData = {
-          email,
-          name,
-          company,
-          leadsRemaining: 10,
-          isPremium: false
-        };
+    // Simulated signup - no actual data is sent to any server
+    return new Promise<void>((resolve, reject) => {
+      try {
+        // Simple validation
+        if (!email.includes('@')) {
+          throw new Error('Invalid email format');
+        }
         
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userData", JSON.stringify(userData));
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters');
+        }
         
-        toast.success("Account created successfully!");
-        resolve();
-      }, 1000);
+        if (!name || name.length < 2) {
+          throw new Error('Name is required and must be at least 2 characters');
+        }
+        
+        setTimeout(() => {
+          const userData = {
+            email,
+            name,
+            company,
+            leadsRemaining: 10,
+            isPremium: false
+          };
+          
+          setUser(userData);
+          setIsAuthenticated(true);
+          localStorage.setItem("isLoggedIn", "true");
+          localStorage.setItem("userData", JSON.stringify(userData));
+          
+          resolve();
+        }, 800); // Simulate network delay
+      } catch (error) {
+        reject(error);
+      }
     });
   };
 
@@ -103,8 +130,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userData");
-    toast.success("Logged out successfully");
-    navigate("/login");
   };
 
   const checkLeadLimit = () => {
