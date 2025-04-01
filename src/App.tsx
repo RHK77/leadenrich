@@ -23,13 +23,14 @@ import ExportOptionsFeature from "./pages/ExportOptionsFeature";
 
 const queryClient = new QueryClient();
 
-// ProtectedRoute component requires authentication
+// Routes that need authentication
 const ProtectedRoutes = () => {
-  return (
-    <AuthProvider>
-      <Outlet />
-    </AuthProvider>
-  );
+  return <Outlet />;
+};
+
+// Routes that need AuthContext but don't require authentication
+const AuthRoutes = () => {
+  return <Outlet />;
 };
 
 const App = () => (
@@ -38,28 +39,35 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/features" element={<Features />} />
-          <Route path="/pricing" element={<PricingPlans />} />
-          
-          {/* Feature detail pages */}
-          <Route path="/feature/lead-enrichment" element={<LeadEnrichmentFeature />} />
-          <Route path="/feature/ai-email" element={<AIEmailFeature />} />
-          <Route path="/feature/data-sources" element={<DataSourcesFeature />} />
-          <Route path="/feature/dashboard" element={<DashboardFeature />} />
-          <Route path="/feature/free-trial" element={<FreeTrialFeature />} />
-          <Route path="/feature/export-options" element={<ExportOptionsFeature />} />
-          
-          {/* Protected routes */}
-          <Route element={<ProtectedRoutes />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            
+            {/* Auth routes (Login, Signup) */}
+            <Route element={<AuthRoutes />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+            </Route>
+            
+            <Route path="/features" element={<Features />} />
+            <Route path="/pricing" element={<PricingPlans />} />
+            
+            {/* Feature detail pages */}
+            <Route path="/feature/lead-enrichment" element={<LeadEnrichmentFeature />} />
+            <Route path="/feature/ai-email" element={<AIEmailFeature />} />
+            <Route path="/feature/data-sources" element={<DataSourcesFeature />} />
+            <Route path="/feature/dashboard" element={<DashboardFeature />} />
+            <Route path="/feature/free-trial" element={<FreeTrialFeature />} />
+            <Route path="/feature/export-options" element={<ExportOptionsFeature />} />
+            
+            {/* Protected routes */}
+            <Route element={<ProtectedRoutes />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
