@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,13 +24,14 @@ const LoginForm = () => {
     
     setIsLoading(true);
     
-    // Simulating authentication
-    setTimeout(() => {
-      setIsLoading(false);
-      localStorage.setItem("isLoggedIn", "true");
-      toast.success("Login successful!");
+    try {
+      await login(email, password);
       navigate("/dashboard");
-    }, 1000);
+    } catch (error) {
+      toast.error("Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
