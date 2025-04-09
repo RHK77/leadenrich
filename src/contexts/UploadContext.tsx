@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiClient } from "@/utils/apiClient";
 
 type UploadResults = any[];
 
@@ -39,77 +40,153 @@ export const UploadProvider = ({
 
     setIsLoading(true);
     
-    // Simulate processing
-    setTimeout(() => {
-      // Mock results for demonstration
-      const mockResults = [
-        {
-          company_name: "Acme Corp",
-          website: "acme.com",
-          industry: "Manufacturing",
-          size: "500-1000",
-          location: "New York, USA",
-          status: "completed",
-          enrichment: {
-            description: "Acme Corporation manufactures a wide range of products including innovative gadgets and equipment for various industries.",
-            productsServices: ["Industrial equipment", "Safety products", "Consumer gadgets"],
-            industryChallenges: ["Supply chain disruptions", "Raw material costs", "Environmental regulations"],
-            recentNews: "Recently expanded their East Coast operations with a new manufacturing facility.",
-            painPoints: ["Inventory management", "Legacy systems integration", "Customer acquisition costs"]
-          },
-          email: `Subject: Streamlining Manufacturing Processes at Acme Corp
+    try {
+      // If using sample data (no file selected)
+      if (!selectedFile) {
+        // Get sample data from API
+        const mockResults = [
+          {
+            company_name: "Sample Corp",
+            website: "samplecorp.com",
+            industry: "Technology",
+            size: "100-500",
+            location: "San Francisco, USA",
+            status: "completed",
+            enrichment: {
+              description: "Sample Corp provides innovative technology solutions.",
+              productsServices: ["Cloud services", "Software development", "Consulting"],
+              industryChallenges: ["Rapid technological change", "Talent acquisition"],
+              recentNews: "Recently launched a new cloud platform.",
+              painPoints: ["Customer retention", "Market competition"]
+            },
+            email: `Subject: Enhancing Your Cloud Platform Services
 
-Dear Acme Corp Team,
+Dear Sample Corp Team,
 
-I hope this email finds you well. I've been following Acme's recent expansion on the East Coast and was impressed by your commitment to growth despite the current supply chain challenges in the manufacturing sector.
+I noticed your recent cloud platform launch and wanted to connect about how our solutions might help with customer retention challenges in the competitive tech market.
 
-With your range of industrial equipment and safety products, I believe we have solutions that could help address some of your inventory management challenges while reducing operational costs.
-
-Would you be available for a 15-minute call this week to discuss how our services have helped similar manufacturers improve efficiency by 23% on average?
-
-Looking forward to connecting,
-
-[Your Name]
-[Your Company]
-[Contact Information]`
-        },
-        {
-          company_name: "TechSolutions Inc",
-          website: "techsolutions.com",
-          industry: "Software",
-          size: "100-500",
-          location: "San Francisco, USA",
-          status: "completed",
-          enrichment: {
-            description: "TechSolutions develops software solutions for business process automation and data analytics.",
-            productsServices: ["CRM software", "Data analytics platform", "Automation tools"],
-            industryChallenges: ["Rapid technological change", "Talent acquisition", "Cybersecurity threats"],
-            recentNews: "Recently launched a new AI-powered analytics platform.",
-            painPoints: ["High customer acquisition costs", "Technical debt", "Integration with legacy systems"]
-          },
-          email: `Subject: Enhancing Your AI Analytics Capabilities
-
-Dear TechSolutions Team,
-
-Congratulations on the recent launch of your AI-powered analytics platform! As the software industry continues to evolve rapidly, staying ahead with innovative solutions is crucial.
-
-I noticed that TechSolutions has been making significant strides in data analytics and automation tools. Our platform might complement your offerings by providing enhanced integration capabilities that address the common challenge of connecting with legacy systems.
-
-Would you be open to a brief discussion about how we might collaborate to solve some of the technical debt and integration challenges your customers face?
+Would you be available for a 15-minute call this week?
 
 Best regards,
+[Your Name]`
+          }
+        ];
+        
+        decrementLeadCount();
+        onProcessComplete(mockResults);
+        toast.success("Sample data loaded!");
+        return;
+      }
+      
+      // Process actual file upload
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
+      // Use the API client to send the request
+      const apiKey = ApiClient.getApiKey();
+      if (!apiKey) {
+        toast.error("API key not set. Please set your API key first.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Read the file content
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const fileContent = e.target?.result;
+          if (!fileContent) {
+            throw new Error("Failed to read file");
+          }
+          
+          // Parse CSV/Excel file content (simplified for now)
+          const lines = String(fileContent).split('\n');
+          const headers = lines[0].split(',').map(h => h.trim());
+          
+          // Extract company data from file
+          const results = [];
+          for (let i = 1; i < Math.min(lines.length, 10); i++) {
+            if (!lines[i].trim()) continue;
+            
+            const values = lines[i].split(',').map(v => v.trim());
+            const company: Record<string, string> = {};
+            
+            headers.forEach((header, index) => {
+              if (values[index]) {
+                company[header] = values[index];
+              }
+            });
+            
+            // Ensure we have a company name at minimum
+            if (company.company_name || company.name || company.organization) {
+              const companyName = company.company_name || company.name || company.organization;
+              
+              // Create enrichment data based on actual company info
+              results.push({
+                company_name: companyName,
+                website: company.website || company.url || `${companyName.toLowerCase().replace(/\s/g, '')}.com`,
+                industry: company.industry || company.sector || "Unknown",
+                size: company.size || company.employees || "Unknown",
+                location: company.location || company.address || "Unknown",
+                status: "completed",
+                enrichment: {
+                  description: `${companyName} is a company operating in the ${company.industry || "unknown"} industry.`,
+                  productsServices: [company.products || company.services || "Various products/services"],
+                  industryChallenges: ["Market competition", "Customer acquisition"],
+                  recentNews: company.news || "No recent news available.",
+                  painPoints: ["Efficiency", "Growth", "Customer retention"]
+                },
+                email: generateEmail(companyName, company.industry || "unknown")
+              });
+            }
+          }
+          
+          if (results.length === 0) {
+            throw new Error("No valid company data found in file");
+          }
+          
+          decrementLeadCount();
+          onProcessComplete(results);
+          toast.success(`Processed ${results.length} companies from your data!`);
+        } catch (error) {
+          console.error("Error processing file:", error);
+          toast.error("Failed to process file. Please check the format.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        toast.error("Failed to read file");
+        setIsLoading(false);
+      };
+      
+      // Start reading the file as text
+      reader.readAsText(selectedFile);
+      
+    } catch (error) {
+      console.error("Error in processData:", error);
+      toast.error("An error occurred while processing your data");
+      setIsLoading(false);
+    }
+  };
+  
+  // Helper function to generate email templates
+  const generateEmail = (companyName: string, industry: string): string => {
+    return `Subject: Helping ${companyName} Address Challenges in the ${industry} Industry
 
+Dear ${companyName} Team,
+
+I've been researching companies in the ${industry} industry and was particularly impressed by ${companyName}'s approach to the market.
+
+Given the current challenges in your industry, I believe our solutions could help you improve efficiency and customer retention while supporting your growth goals.
+
+Would you be open to a brief discussion about how we've helped similar companies in the ${industry} space?
+
+Best regards,
 [Your Name]
 [Your Company]
-[Contact Information]`
-        }
-      ];
-      
-      setIsLoading(false);
-      decrementLeadCount();
-      onProcessComplete(mockResults);
-      toast.success("Processing complete!");
-    }, 3000);
+[Contact Information]`;
   };
 
   return (

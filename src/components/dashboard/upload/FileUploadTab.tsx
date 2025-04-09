@@ -38,6 +38,12 @@ const FileUploadTab = () => {
     await processData();
   };
 
+  const handleUseSampleData = async () => {
+    // Clear any selected file to use sample data
+    setSelectedFile(null);
+    await processData();
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -72,7 +78,7 @@ const FileUploadTab = () => {
         <Button 
           type="button" 
           variant="outline"
-          onClick={processData}
+          onClick={handleUseSampleData}
           disabled={isLoading}
         >
           Use Sample Data
