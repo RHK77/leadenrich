@@ -10,6 +10,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ApiKeyProvider } from "./contexts/ApiKeyContext";
 import PricingPlans from "./pages/PricingPlans";
 import Features from "./pages/Features";
 
@@ -30,26 +31,28 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/pricing" element={<PricingPlans />} />
-            
-            {/* Feature detail pages */}
-            <Route path="/feature/lead-enrichment" element={<LeadEnrichmentFeature />} />
-            <Route path="/feature/ai-email" element={<AIEmailFeature />} />
-            <Route path="/feature/data-sources" element={<DataSourcesFeature />} />
-            <Route path="/feature/dashboard" element={<DashboardFeature />} />
-            <Route path="/feature/free-trial" element={<FreeTrialFeature />} />
-            <Route path="/feature/export-options" element={<ExportOptionsFeature />} />
-            
-            {/* Dashboard - removed nested routing to simplify */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ApiKeyProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/pricing" element={<PricingPlans />} />
+              
+              {/* Feature detail pages */}
+              <Route path="/feature/lead-enrichment" element={<LeadEnrichmentFeature />} />
+              <Route path="/feature/ai-email" element={<AIEmailFeature />} />
+              <Route path="/feature/data-sources" element={<DataSourcesFeature />} />
+              <Route path="/feature/dashboard" element={<DashboardFeature />} />
+              <Route path="/feature/free-trial" element={<FreeTrialFeature />} />
+              <Route path="/feature/export-options" element={<ExportOptionsFeature />} />
+              
+              {/* Dashboard - removed nested routing to simplify */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ApiKeyProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

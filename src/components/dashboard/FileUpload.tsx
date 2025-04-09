@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,8 @@ import { toast } from "sonner";
 import { FileIcon, Loader2, Database, Table, FileSpreadsheet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
+import { useApiKey } from "@/contexts/ApiKeyContext";
+import ApiKeyForm from "./ApiKeyForm";
 
 type FileUploadProps = {
   onProcessComplete: (results: any[]) => void;
@@ -15,6 +16,7 @@ type FileUploadProps = {
 
 const FileUpload = ({ onProcessComplete }: FileUploadProps) => {
   const { checkLeadLimit, decrementLeadCount, user } = useAuth();
+  const { hasApiKey } = useApiKey();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [notionUrl, setNotionUrl] = useState("");
@@ -40,6 +42,11 @@ const FileUpload = ({ onProcessComplete }: FileUploadProps) => {
   };
 
   const processData = async () => {
+    if (!hasApiKey) {
+      toast.error("Please set your API key first");
+      return;
+    }
+    
     if (!checkLeadLimit()) {
       return;
     }
@@ -149,6 +156,10 @@ Best regards,
     await processData();
   };
 
+  if (!hasApiKey) {
+    return <ApiKeyForm />;
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -212,7 +223,6 @@ Best regards,
                   type="button" 
                   variant="outline"
                   onClick={() => {
-                    // For demo purposes, let's trigger the processing directly
                     processData();
                   }}
                   disabled={isLoading}
@@ -314,7 +324,7 @@ Best regards,
 
         <div className="flex justify-between items-center mt-6 pt-4 border-t">
           <div className="text-xs text-muted-foreground">
-            Using test API key: <code className="bg-muted p-1 rounded text-xs">sk-test-1234567890</code>
+            API Key Status: <span className="text-green-500 font-medium">Active</span>
           </div>
           
           {user && !user.isPremium && (
