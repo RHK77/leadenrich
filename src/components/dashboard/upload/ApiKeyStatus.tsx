@@ -1,11 +1,18 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useApiKey } from "@/contexts/ApiKeyContext";
+import { ApiClient } from "@/utils/apiClient";
 import { Key } from "lucide-react";
 
 const ApiKeyStatus = () => {
   const { user } = useAuth();
   const { hasApiKey } = useApiKey();
+  
+  // Get the actual API key to display a preview
+  const apiKey = ApiClient.getApiKey();
+  const apiKeyPreview = apiKey 
+    ? `${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 5)}`
+    : '';
 
   return (
     <div className="flex justify-between items-center mt-6 pt-4 border-t">
@@ -13,9 +20,11 @@ const ApiKeyStatus = () => {
         <Key className="h-3 w-3" />
         API Key Status: 
         {hasApiKey ? (
-          <span className="text-green-500 font-medium">Active</span>
+          <span className="text-green-500 font-medium ml-1">
+            Active <code className="bg-muted p-1 rounded text-xs ml-1">{apiKeyPreview}</code>
+          </span>
         ) : (
-          <span className="text-red-500 font-medium">Not Set</span>
+          <span className="text-red-500 font-medium ml-1">Not Set</span>
         )}
       </div>
       

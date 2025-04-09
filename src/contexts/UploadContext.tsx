@@ -99,16 +99,37 @@ Best regards,
             throw new Error("Failed to read file");
           }
           
-          // Parse CSV/Excel file content (simplified for now)
-          const lines = String(fileContent).split('\n');
-          const headers = lines[0].split(',').map(h => h.trim());
+          console.log("File content type:", typeof fileContent);
+          console.log("File content preview:", String(fileContent).substring(0, 200));
+
+          // Improved CSV parsing
+          const lines = String(fileContent).split(/\r?\n/);
+          console.log(`Found ${lines.length} lines in the file`);
           
-          // Extract company data from file
+          if (lines.length < 2) {
+            throw new Error("File contains insufficient data (needs header row + at least one data row)");
+          }
+          
+          // Get headers - handle both comma and semicolon delimiters
+          let delimiter = ',';
+          if (lines[0].includes(';')) {
+            delimiter = ';';
+          }
+          
+          const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+          console.log("Detected headers:", headers);
+          
+          // Extract company data from file with more flexible parsing
           const results = [];
-          for (let i = 1; i < Math.min(lines.length, 10); i++) {
-            if (!lines[i].trim()) continue;
+          let validCompaniesFound = false;
+          
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue; // Skip empty lines
             
-            const values = lines[i].split(',').map(v => v.trim());
+            const values = line.split(delimiter).map(v => v.trim());
+            if (values.length < 2) continue; // Skip lines with insufficient data
+            
             const company: Record<string, string> = {};
             
             headers.forEach((header, index) => {
@@ -117,32 +138,67 @@ Best regards,
               }
             });
             
-            // Ensure we have a company name at minimum
-            if (company.company_name || company.name || company.organization) {
-              const companyName = company.company_name || company.name || company.organization;
+            // Determine company name with more flexibility
+            let companyName = '';
+            // Try standard field names for company name
+            const possibleNameFields = ['company_name', 'company', 'name', 'organization', 'business', 'corp', 'corporation'];
+            
+            for (const field of possibleNameFields) {
+              if (company[field]) {
+                companyName = company[field];
+                break;
+              }
+            }
+            
+            // If we still don't have a name, use first non-empty field as fallback
+            if (!companyName) {
+              const firstNonEmptyKey = Object.keys(company).find(key => company[key] && company[key].length > 1);
+              if (firstNonEmptyKey) {
+                companyName = company[firstNonEmptyKey];
+                console.log(`Using ${firstNonEmptyKey} as company name:`, companyName);
+              }
+            }
+            
+            if (companyName) {
+              validCompaniesFound = true;
               
-              // Create enrichment data based on actual company info
+              // Get website, try standard fields or generate from name
+              const website = company.website || company.url || company.site || 
+                `${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+              
+              // Get industry
+              const industry = company.industry || company.sector || company.vertical || "Unknown";
+              
+              // Get size
+              const size = company.size || company.employees || company.employee_count || "Unknown";
+              
+              // Get location
+              const location = company.location || company.address || company.city || "Unknown";
+              
+              // Create enrichment data based on company info
               results.push({
                 company_name: companyName,
-                website: company.website || company.url || `${companyName.toLowerCase().replace(/\s/g, '')}.com`,
-                industry: company.industry || company.sector || "Unknown",
-                size: company.size || company.employees || "Unknown",
-                location: company.location || company.address || "Unknown",
+                website,
+                industry,
+                size,
+                location,
                 status: "completed",
                 enrichment: {
-                  description: `${companyName} is a company operating in the ${company.industry || "unknown"} industry.`,
+                  description: `${companyName} is a company operating in the ${industry} industry.`,
                   productsServices: [company.products || company.services || "Various products/services"],
                   industryChallenges: ["Market competition", "Customer acquisition"],
                   recentNews: company.news || "No recent news available.",
                   painPoints: ["Efficiency", "Growth", "Customer retention"]
                 },
-                email: generateEmail(companyName, company.industry || "unknown")
+                email: generateEmail(companyName, industry)
               });
             }
           }
           
-          if (results.length === 0) {
-            throw new Error("No valid company data found in file");
+          if (!validCompaniesFound) {
+            console.log("No companies found. Headers:", headers);
+            console.log("Sample data row:", lines.length > 1 ? lines[1] : "No data rows");
+            throw new Error("No valid company data found in file. Please ensure your file has headers and company information.");
           }
           
           decrementLeadCount();
@@ -150,7 +206,7 @@ Best regards,
           toast.success(`Processed ${results.length} companies from your data!`);
         } catch (error) {
           console.error("Error processing file:", error);
-          toast.error("Failed to process file. Please check the format.");
+          toast.error(error instanceof Error ? error.message : "Failed to process file. Please check the format.");
         } finally {
           setIsLoading(false);
         }
