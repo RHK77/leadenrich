@@ -9,7 +9,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthProvider";
 import { ApiKeyProvider } from "./contexts/ApiKeyContext";
 import PricingPlans from "./pages/PricingPlans";
 import Features from "./pages/Features";

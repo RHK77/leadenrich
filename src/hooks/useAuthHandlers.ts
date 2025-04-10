@@ -1,41 +1,18 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
-import { useProfile } from '@/hooks/useProfile';
-import { useLeads } from '@/hooks/useLeads';
+import { toast } from "sonner";
+import { User } from '@/types/user';
 import { getSupabaseUrl, getSupabaseKey } from '@/utils/authUtils';
 
-type User = {
-  email: string;
-  name: string;
-  company?: string;
-  leadsRemaining: number;
-  isPremium: boolean;
-  fullName?: string;
-  companyName?: string;
-  contactInfo?: string;
+type AuthHandlerProps = {
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-type AuthContextType = {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, company?: string) => Promise<void>;
-  logout: () => void;
-  checkLeadLimit: () => boolean;
-  decrementLeadCount: () => void;
-  updateProfile: (data: { fullName?: string; companyName?: string; contactInfo?: string }) => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { updateUserProfile } = useProfile();
-  const { checkLeadLimit: checkLimit, decrementLeadCount: decrementLead } = useLeads(user, setUser);
-
+export const useAuthHandlers = ({ setUser, setIsAuthenticated }: AuthHandlerProps) => {
+  // Set up auth state listener on mount
   useEffect(() => {
     // Check for existing login on component mount
     const checkAuth = async () => {
@@ -130,29 +107,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const fetchUserProfile = async (userId: string) => {
-    // Use a direct fetch approach to bypass TypeScript issues with RPC
-    const response = await fetch(`${getSupabaseUrl()}/rest/v1/rpc/get_profile_by_id`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': getSupabaseKey(),
-        'Authorization': `Bearer ${getSupabaseKey()}`
-      },
-      body: JSON.stringify({
-        user_id: userId
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      return { data: null, error: { message: errorText, code: response.status.toString() } };
-    }
-    
-    const data = await response.json();
-    return { data, error: null };
-  };
-
   const login = async (email: string, password: string) => {
     return await handleAuth(() => supabase.auth.signInWithPassword({ email, password }));
   };
@@ -175,7 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleAuth = async (authFunction: () => Promise<any>) => {
     return new Promise<void>(async (resolve, reject) => {
       try {
-        // Simple validation - moved to hook or external file
         const { data, error } = await authFunction();
         
         if (error) throw error;
@@ -199,50 +152,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("userData");
   };
 
-  const updateProfile = async (data: { fullName?: string; companyName?: string; contactInfo?: string }) => {
-    await updateUserProfile(data);
-    
-    // Update local user state if successful
-    setUser(prevUser => {
-      if (!prevUser) return null;
-      
-      const updated = {
-        ...prevUser,
-        fullName: data.fullName || prevUser.fullName,
-        companyName: data.companyName || prevUser.companyName,
-        contactInfo: data.contactInfo || prevUser.contactInfo
-      };
-      
-      localStorage.setItem("userData", JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const checkLeadLimit = () => checkLimit();
-  const decrementLeadCount = () => decrementLead();
-
-  return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isAuthenticated, 
-        login, 
-        signup, 
-        logout, 
-        checkLeadLimit,
-        decrementLeadCount,
-        updateProfile
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  return { login, signup, logout, handleAuthStateChange };
 };
