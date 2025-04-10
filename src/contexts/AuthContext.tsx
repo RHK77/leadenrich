@@ -1,7 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from '@/hooks/useProfile';
+import { useLeads } from '@/hooks/useLeads';
 
 type User = {
   email: string;
@@ -30,44 +32,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { updateUserProfile } = useProfile();
+  const { checkLeadLimit: checkLimit, decrementLeadCount: decrementLead } = useLeads(user, setUser);
 
   useEffect(() => {
     // Check for existing login on component mount
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { user: supabaseUser } = session;
-        
-        // Get user profile from Supabase
-        let profile = null;
-        try {
-          // Use a more direct approach that works with TypeScript
-          const response = await supabase.rpc(
-            'get_profile_by_id', 
-            { user_id: supabaseUser.id } as any
-          );
-          
-          if (response.error && response.error.code !== 'PGRST116') throw response.error;
-          profile = response.data;
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-        }
-
-        // Combine auth user and profile data
-        const userData = {
-          email: supabaseUser.email || '',
-          name: supabaseUser.email?.split('@')[0] || '',
-          leadsRemaining: 10,
-          isPremium: false,
-          fullName: profile?.full_name || '',
-          companyName: profile?.company_name || '',
-          contactInfo: profile?.contact_info || '',
-        };
-        
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userData", JSON.stringify(userData));
+        await handleAuthStateChange('SIGNED_IN', session);
       } else {
         // Check for legacy login (non-Supabase)
         const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -94,115 +67,100 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
 
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          const { user: supabaseUser } = session;
-          
-          // Get user profile
-          let profile = null;
-          try {
-            // Use a more direct approach that works with TypeScript
-            const response = await supabase.rpc(
-              'get_profile_by_id', 
-              { user_id: supabaseUser.id } as any
-            );
-            
-            if (response.error && response.error.code !== 'PGRST116') throw response.error;
-            profile = response.data;
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-          }
-
-          // Combine auth user and profile data
-          const userData = {
-            email: supabaseUser.email || '',
-            name: supabaseUser.email?.split('@')[0] || '',
-            leadsRemaining: 10,
-            isPremium: false,
-            fullName: profile?.full_name || '',
-            companyName: profile?.company_name || '',
-            contactInfo: profile?.contact_info || '',
-          };
-          
-          setUser(userData);
-          setIsAuthenticated(true);
-          localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("userData", JSON.stringify(userData));
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setIsAuthenticated(false);
-          localStorage.removeItem("isLoggedIn");
-          localStorage.removeItem("userData");
-        }
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Simulated login - no actual authentication, just for demo purposes
-    return new Promise<void>(async (resolve, reject) => {
+  const handleAuthStateChange = async (event: string, session: Session | null) => {
+    if (event === 'SIGNED_IN' && session) {
+      const { user: supabaseUser } = session;
+      
+      // Get user profile
+      let profile = null;
       try {
-        // Simple validation
-        if (!email.includes('@')) {
-          throw new Error('Invalid email format');
-        }
+        const { data, error } = await fetchUserProfile(supabaseUser.id);
         
-        if (password.length < 6) {
-          throw new Error('Password must be at least 6 characters');
-        }
-        
-        // Sign in with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) throw error;
-        
-        resolve();
+        if (error && error.code !== 'PGRST116') throw error;
+        profile = data;
       } catch (error) {
-        reject(error);
+        console.error('Error fetching user profile:', error);
       }
+
+      // Combine auth user and profile data
+      const userData = {
+        email: supabaseUser.email || '',
+        name: supabaseUser.email?.split('@')[0] || '',
+        leadsRemaining: 10,
+        isPremium: false,
+        fullName: profile?.full_name || '',
+        companyName: profile?.company_name || '',
+        contactInfo: profile?.contact_info || '',
+      };
+      
+      setUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userData", JSON.stringify(userData));
+    } else if (event === 'SIGNED_OUT') {
+      setUser(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("userData");
+    }
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    // Use a direct fetch approach to bypass TypeScript issues with RPC
+    const response = await fetch(`${supabase.getUrl()}/rest/v1/rpc/get_profile_by_id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabase.supabaseKey ?? '',
+        'Authorization': `Bearer ${supabase.supabaseKey ?? ''}`
+      },
+      body: JSON.stringify({
+        user_id: userId
+      })
     });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { data: null, error: { message: errorText, code: response.status.toString() } };
+    }
+    
+    const data = await response.json();
+    return { data, error: null };
+  };
+
+  const login = async (email: string, password: string) => {
+    return await handleAuth(() => supabase.auth.signInWithPassword({ email, password }));
   };
 
   const signup = async (name: string, email: string, password: string, company?: string) => {
-    // Simulated signup - no actual data is sent to any server
+    return await handleAuth(() => {
+      return supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            company
+          }
+        }
+      });
+    });
+  };
+
+  const handleAuth = async (authFunction: () => Promise<any>) => {
     return new Promise<void>(async (resolve, reject) => {
       try {
-        // Simple validation
-        if (!email.includes('@')) {
-          throw new Error('Invalid email format');
-        }
+        // Simple validation - moved to hook or external file
+        const { data, error } = await authFunction();
         
-        if (password.length < 6) {
-          throw new Error('Password must be at least 6 characters');
-        }
-        
-        if (!name || name.length < 2) {
-          throw new Error('Name is required and must be at least 2 characters');
-        }
-        
-        // Sign up with Supabase
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name,
-              company
-            }
-          }
-        });
-
         if (error) throw error;
-        
-        // We'll let the database trigger handle profile creation
         resolve();
       } catch (error) {
         reject(error);
@@ -224,83 +182,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProfile = async (data: { fullName?: string; companyName?: string; contactInfo?: string }) => {
-    if (!user) {
-      toast.error("You must be logged in to update your profile");
-      return;
-    }
+    await updateUserProfile(data);
     
-    try {
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
+    // Update local user state if successful
+    setUser(prevUser => {
+      if (!prevUser) return null;
       
-      if (!session.session) {
-        toast.error("Session expired. Please log in again");
-        return;
-      }
+      const updated = {
+        ...prevUser,
+        fullName: data.fullName || prevUser.fullName,
+        companyName: data.companyName || prevUser.companyName,
+        contactInfo: data.contactInfo || prevUser.contactInfo
+      };
       
-      // Use direct RPC call with proper typing
-      const { error } = await supabase.rpc(
-        'update_user_profile',
-        {
-          user_id: session.session.user.id,
-          full_name_param: data.fullName,
-          company_name_param: data.companyName,
-          contact_info_param: data.contactInfo
-        } as any
-      );
-      
-      if (error) throw error;
-      
-      // Update local user state
-      setUser(prevUser => {
-        if (!prevUser) return null;
-        
-        const updated = {
-          ...prevUser,
-          fullName: data.fullName || prevUser.fullName,
-          companyName: data.companyName || prevUser.companyName,
-          contactInfo: data.contactInfo || prevUser.contactInfo
-        };
-        
-        localStorage.setItem("userData", JSON.stringify(updated));
-        return updated;
-      });
-      
-      toast.success("Profile updated successfully");
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error("Failed to update profile");
-    }
+      localStorage.setItem("userData", JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  const checkLeadLimit = () => {
-    if (!user) return false;
-    
-    if (user.isPremium) return true;
-    
-    if (user.leadsRemaining <= 0) {
-      toast.error("Free trial limit reached. Please upgrade to continue.");
-      return false;
-    }
-    
-    return true;
-  };
-
-  const decrementLeadCount = () => {
-    if (!user || user.isPremium) return;
-    
-    const newLeadsRemaining = Math.max(0, user.leadsRemaining - 1);
-    const updatedUser = { ...user, leadsRemaining: newLeadsRemaining };
-    
-    setUser(updatedUser);
-    localStorage.setItem("userData", JSON.stringify(updatedUser));
-    
-    if (newLeadsRemaining === 0) {
-      toast.warning("You've used all your free trial leads. Upgrade to continue.");
-    } else if (newLeadsRemaining <= 3) {
-      toast.info(`Only ${newLeadsRemaining} free leads remaining.`);
-    }
-  };
+  const checkLeadLimit = () => checkLimit();
+  const decrementLeadCount = () => decrementLead();
 
   return (
     <AuthContext.Provider 
