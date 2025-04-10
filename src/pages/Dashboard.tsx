@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -18,19 +17,15 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Check if user is logged in
-    const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-      setIsAuthenticated(isLoggedIn);
-      
-      if (!isLoggedIn) {
-        toast.error("Please log in to access the dashboard");
-        navigate("/login");
-      }
-    };
+    // Check if user is logged in - only once, not in a loop
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    setIsAuthenticated(isLoggedIn);
     
-    checkAuth();
-  }, [navigate]);
+    if (!isLoggedIn) {
+      toast.error("Please log in to access the dashboard");
+      navigate("/login");
+    }
+  }, [navigate]); // Only run once when component mounts
   
   const handleProcessComplete = (processedResults: any[]) => {
     setResults(processedResults);
