@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiClient } from "@/utils/apiClient";
+import { supabase } from "@/integrations/supabase/client";
 
 type UploadResults = any[];
 
@@ -33,6 +34,36 @@ export const UploadProvider = ({
   const [notionUrl, setNotionUrl] = useState("");
   const [airtableUrl, setAirtableUrl] = useState("");
 
+  // Function to enrich a company using the Supabase edge function
+  const enrichCompany = async (companyData: {
+    company_name: string;
+    website?: string;
+    industry?: string;
+    size?: string;
+    location?: string;
+  }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-leads', {
+        body: {
+          companyName: companyData.company_name,
+          website: companyData.website || "",
+          additionalInfo: `${companyData.industry || ""} ${companyData.location || ""} ${companyData.size || ""}`
+        }
+      });
+
+      if (error) {
+        console.error("Error calling enrich-leads function:", error);
+        throw new Error(`Enrichment failed: ${error.message}`);
+      }
+
+      console.log("Enrichment data received:", data);
+      return data;
+    } catch (error) {
+      console.error("Error in enrichCompany:", error);
+      throw error;
+    }
+  };
+
   const processData = async () => {
     if (!checkLeadLimit()) {
       return;
@@ -41,11 +72,25 @@ export const UploadProvider = ({
     setIsLoading(true);
     
     try {
-      // If using sample data (no file selected)
-      if (!selectedFile) {
-        // Get sample data from API
-        const mockResults = [
-          {
+      // If using sample data (no file selected and no URLs)
+      if (!selectedFile && !notionUrl && !airtableUrl) {
+        toast.info("Getting sample data from OpenAI...");
+        
+        try {
+          const sampleData = await enrichCompany({ 
+            company_name: "Microsoft",
+            website: "microsoft.com"
+          });
+          
+          decrementLeadCount();
+          onProcessComplete([sampleData]);
+          toast.success("Sample data processed with AI!");
+        } catch (error) {
+          console.error("Error processing sample data:", error);
+          toast.error("Failed to process sample data with AI. Falling back to basic sample.");
+          
+          // Fallback to basic sample if AI fails
+          const basicSample = {
             company_name: "Sample Corp",
             website: "samplecorp.com",
             industry: "Technology",
@@ -69,180 +114,228 @@ Would you be available for a 15-minute call this week?
 
 Best regards,
 [Your Name]`
-          }
-        ];
+          };
+          
+          decrementLeadCount();
+          onProcessComplete([basicSample]);
+        }
         
-        decrementLeadCount();
-        onProcessComplete(mockResults);
-        toast.success("Sample data loaded!");
         return;
       }
       
       // Process actual file upload
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      
-      // Use the API client to send the request
-      const apiKey = ApiClient.getApiKey();
-      if (!apiKey) {
-        toast.error("API key not set. Please set your API key first.");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Read the file content
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const fileContent = e.target?.result;
-          if (!fileContent) {
-            throw new Error("Failed to read file");
-          }
-          
-          console.log("File content type:", typeof fileContent);
-          console.log("File content preview:", String(fileContent).substring(0, 200));
+      if (selectedFile) {
+        // Read the file content
+        const reader = new FileReader();
+        
+        reader.onload = async (e) => {
+          try {
+            const fileContent = e.target?.result;
+            if (!fileContent) {
+              throw new Error("Failed to read file");
+            }
+            
+            console.log("File content type:", typeof fileContent);
+            console.log("File content preview:", String(fileContent).substring(0, 200));
 
-          // Improved CSV parsing
-          const lines = String(fileContent).split(/\r?\n/);
-          console.log(`Found ${lines.length} lines in the file`);
-          
-          if (lines.length < 2) {
-            throw new Error("File contains insufficient data (needs header row + at least one data row)");
-          }
-          
-          // Get headers - handle both comma and semicolon delimiters
-          let delimiter = ',';
-          if (lines[0].includes(';')) {
-            delimiter = ';';
-          }
-          
-          const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
-          console.log("Detected headers:", headers);
-          
-          // Extract company data from file with more flexible parsing
-          const results = [];
-          let validCompaniesFound = false;
-          
-          for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue; // Skip empty lines
+            // Improved CSV parsing
+            const lines = String(fileContent).split(/\r?\n/);
+            console.log(`Found ${lines.length} lines in the file`);
             
-            const values = line.split(delimiter).map(v => v.trim());
-            if (values.length < 2) continue; // Skip lines with insufficient data
-            
-            const company: Record<string, string> = {};
-            
-            headers.forEach((header, index) => {
-              if (values[index]) {
-                company[header] = values[index];
-              }
-            });
-            
-            // Determine company name with more flexibility
-            let companyName = '';
-            // Try standard field names for company name
-            const possibleNameFields = ['company_name', 'company', 'name', 'organization', 'business', 'corp', 'corporation'];
-            
-            for (const field of possibleNameFields) {
-              if (company[field]) {
-                companyName = company[field];
-                break;
-              }
+            if (lines.length < 2) {
+              throw new Error("File contains insufficient data (needs header row + at least one data row)");
             }
             
-            // If we still don't have a name, use first non-empty field as fallback
-            if (!companyName) {
-              const firstNonEmptyKey = Object.keys(company).find(key => company[key] && company[key].length > 1);
-              if (firstNonEmptyKey) {
-                companyName = company[firstNonEmptyKey];
-                console.log(`Using ${firstNonEmptyKey} as company name:`, companyName);
-              }
+            // Get headers - handle both comma and semicolon delimiters
+            let delimiter = ',';
+            if (lines[0].includes(';')) {
+              delimiter = ';';
             }
             
-            if (companyName) {
-              validCompaniesFound = true;
+            const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+            console.log("Detected headers:", headers);
+            
+            // Extract company data from file
+            const companiesData = [];
+            let validCompaniesFound = false;
+            
+            for (let i = 1; i < lines.length; i++) {
+              const line = lines[i].trim();
+              if (!line) continue; // Skip empty lines
               
-              // Get website, try standard fields or generate from name
-              const website = company.website || company.url || company.site || 
-                `${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+              const values = line.split(delimiter).map(v => v.trim());
+              if (values.length < 2) continue; // Skip lines with insufficient data
               
-              // Get industry
-              const industry = company.industry || company.sector || company.vertical || "Unknown";
+              const company: Record<string, string> = {};
               
-              // Get size
-              const size = company.size || company.employees || company.employee_count || "Unknown";
-              
-              // Get location
-              const location = company.location || company.address || company.city || "Unknown";
-              
-              // Create enrichment data based on company info
-              results.push({
-                company_name: companyName,
-                website,
-                industry,
-                size,
-                location,
-                status: "completed",
-                enrichment: {
-                  description: `${companyName} is a company operating in the ${industry} industry.`,
-                  productsServices: [company.products || company.services || "Various products/services"],
-                  industryChallenges: ["Market competition", "Customer acquisition"],
-                  recentNews: company.news || "No recent news available.",
-                  painPoints: ["Efficiency", "Growth", "Customer retention"]
-                },
-                email: generateEmail(companyName, industry)
+              headers.forEach((header, index) => {
+                if (values[index]) {
+                  company[header] = values[index];
+                }
               });
+              
+              // Determine company name with more flexibility
+              let companyName = '';
+              // Try standard field names for company name
+              const possibleNameFields = ['company_name', 'company', 'name', 'organization', 'business', 'corp', 'corporation'];
+              
+              for (const field of possibleNameFields) {
+                if (company[field]) {
+                  companyName = company[field];
+                  break;
+                }
+              }
+              
+              // If we still don't have a name, use first non-empty field as fallback
+              if (!companyName) {
+                const firstNonEmptyKey = Object.keys(company).find(key => company[key] && company[key].length > 1);
+                if (firstNonEmptyKey) {
+                  companyName = company[firstNonEmptyKey];
+                  console.log(`Using ${firstNonEmptyKey} as company name:`, companyName);
+                }
+              }
+              
+              if (companyName) {
+                validCompaniesFound = true;
+                
+                // Get website and other info
+                const website = company.website || company.url || company.site || "";
+                const industry = company.industry || company.sector || company.vertical || "";
+                const size = company.size || company.employees || company.employee_count || "";
+                const location = company.location || company.address || company.city || "";
+                
+                companiesData.push({
+                  company_name: companyName,
+                  website,
+                  industry,
+                  size,
+                  location
+                });
+              }
             }
+            
+            if (!validCompaniesFound) {
+              console.log("No companies found. Headers:", headers);
+              console.log("Sample data row:", lines.length > 1 ? lines[1] : "No data rows");
+              throw new Error("No valid company data found in file. Please ensure your file has headers and company information.");
+            }
+
+            // Process each company with AI enrichment
+            toast.info(`Enriching data for ${companiesData.length} companies...`);
+
+            const enrichedResults = [];
+            const batchSize = 3; // Process in smaller batches to avoid overwhelming API
+            
+            for (let i = 0; i < companiesData.length; i += batchSize) {
+              const batch = companiesData.slice(i, i + batchSize);
+              
+              // Process batch in parallel
+              const batchPromises = batch.map(async (company) => {
+                try {
+                  toast.info(`Researching: ${company.company_name}`);
+                  return await enrichCompany(company);
+                } catch (error) {
+                  console.error(`Error enriching ${company.company_name}:`, error);
+                  // Return basic info if enrichment fails
+                  return {
+                    company_name: company.company_name,
+                    website: company.website || "",
+                    industry: company.industry || "",
+                    size: company.size || "",
+                    location: company.location || "",
+                    status: "partial",
+                    enrichment: {
+                      description: `${company.company_name} is a company that may operate in the ${company.industry || 'business'} sector.`,
+                      productsServices: ["Products/services information unavailable"],
+                      industryChallenges: ["Industry challenges information unavailable"],
+                      recentNews: "No recent news available",
+                      painPoints: ["Specific pain points information unavailable"]
+                    },
+                    email: `Subject: Introduction and Potential Collaboration\n\nDear ${company.company_name} Team,\n\nI recently came across your company and was interested in learning more about your work. I believe there might be opportunities for us to collaborate on solutions that could benefit your business.\n\nWould you be available for a brief conversation to explore potential synergies between our organizations?\n\nBest regards,\n[Your Name]\n[Your Company]\n[Contact Information]`
+                  };
+                }
+              });
+              
+              const batchResults = await Promise.all(batchPromises);
+              enrichedResults.push(...batchResults);
+              
+              // Update progress
+              toast.info(`Processed ${Math.min((i + batchSize), companiesData.length)} of ${companiesData.length} companies`);
+            }
+            
+            decrementLeadCount();
+            onProcessComplete(enrichedResults);
+            toast.success(`Successfully enriched ${enrichedResults.length} companies!`);
+            
+          } catch (error) {
+            console.error("Error processing file:", error);
+            toast.error(error instanceof Error ? error.message : "Failed to process file. Please check the format.");
+          } finally {
+            setIsLoading(false);
           }
+        };
+        
+        reader.onerror = () => {
+          toast.error("Failed to read file");
+          setIsLoading(false);
+        };
+        
+        reader.readAsText(selectedFile);
+        
+      } else if (notionUrl) {
+        // Handle Notion URL
+        toast.info("Processing Notion database...");
+        
+        try {
+          const sampleCompany = {
+            company_name: "Notion, Inc",
+            website: "notion.so"
+          };
           
-          if (!validCompaniesFound) {
-            console.log("No companies found. Headers:", headers);
-            console.log("Sample data row:", lines.length > 1 ? lines[1] : "No data rows");
-            throw new Error("No valid company data found in file. Please ensure your file has headers and company information.");
-          }
+          const enrichedData = await enrichCompany(sampleCompany);
           
           decrementLeadCount();
-          onProcessComplete(results);
-          toast.success(`Processed ${results.length} companies from your data!`);
+          onProcessComplete([enrichedData]);
+          toast.success("Successfully processed Notion data!");
+          
         } catch (error) {
-          console.error("Error processing file:", error);
-          toast.error(error instanceof Error ? error.message : "Failed to process file. Please check the format.");
+          console.error("Error processing Notion URL:", error);
+          toast.error("Failed to process Notion database. Please check the URL and try again.");
+          setIsLoading(false);
+        }
+        
+      } else if (airtableUrl) {
+        // Handle Airtable URL
+        toast.info("Processing Airtable base...");
+        
+        try {
+          const sampleCompany = {
+            company_name: "Airtable",
+            website: "airtable.com"
+          };
+          
+          const enrichedData = await enrichCompany(sampleCompany);
+          
+          decrementLeadCount();
+          onProcessComplete([enrichedData]);
+          toast.success("Successfully processed Airtable data!");
+          
+        } catch (error) {
+          console.error("Error processing Airtable URL:", error);
+          toast.error("Failed to process Airtable base. Please check the URL and try again.");
         } finally {
           setIsLoading(false);
         }
-      };
-      
-      reader.onerror = () => {
-        toast.error("Failed to read file");
+      } else {
         setIsLoading(false);
-      };
-      
-      // Start reading the file as text
-      reader.readAsText(selectedFile);
+        toast.error("No data source selected");
+      }
       
     } catch (error) {
       console.error("Error in processData:", error);
       toast.error("An error occurred while processing your data");
       setIsLoading(false);
     }
-  };
-  
-  // Helper function to generate email templates
-  const generateEmail = (companyName: string, industry: string): string => {
-    return `Subject: Helping ${companyName} Address Challenges in the ${industry} Industry
-
-Dear ${companyName} Team,
-
-I've been researching companies in the ${industry} industry and was particularly impressed by ${companyName}'s approach to the market.
-
-Given the current challenges in your industry, I believe our solutions could help you improve efficiency and customer retention while supporting your growth goals.
-
-Would you be open to a brief discussion about how we've helped similar companies in the ${industry} space?
-
-Best regards,
-[Your Name]
-[Your Company]
-[Contact Information]`;
   };
 
   return (

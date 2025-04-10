@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Download, MessageSquare, Building } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, MessageSquare, Building, Globe, MapPin, Users, Tag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type Result = {
   company_name: string;
@@ -59,7 +60,7 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
-          Results
+          AI-Enriched Results
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -73,7 +74,7 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
             {results.map((result, index) => (
               <div
                 key={`enrichment-${index}`}
-                className="border rounded-md overflow-hidden"
+                className="border rounded-md overflow-hidden shadow-sm"
               >
                 <div
                   className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer"
@@ -82,9 +83,11 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
                   <div className="font-medium flex items-center">
                     <Building className="h-4 w-4 mr-2" />
                     {result.company_name}
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      ({result.industry})
-                    </span>
+                    {result.industry && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {result.industry}
+                      </Badge>
+                    )}
                   </div>
                   {expandedItems[`enrichment-${index}`] ? (
                     <ChevronUp className="h-4 w-4" />
@@ -95,7 +98,31 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
                 
                 {expandedItems[`enrichment-${index}`] && (
                   <div className="p-4 text-sm">
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Company Quick Facts */}
+                      <div className="flex flex-wrap gap-3 mb-2 text-xs text-muted-foreground">
+                        {result.website && (
+                          <div className="flex items-center gap-1">
+                            <Globe className="h-3 w-3" />
+                            <a href={`https://${result.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                              {result.website}
+                            </a>
+                          </div>
+                        )}
+                        {result.location && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {result.location}
+                          </div>
+                        )}
+                        {result.size && (
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {result.size}
+                          </div>
+                        )}
+                      </div>
+                      
                       <div>
                         <h4 className="font-semibold mb-1">Description</h4>
                         <p>{result.enrichment.description}</p>
@@ -119,10 +146,12 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
                         </ul>
                       </div>
                       
-                      <div>
-                        <h4 className="font-semibold mb-1">Recent News</h4>
-                        <p>{result.enrichment.recentNews}</p>
-                      </div>
+                      {result.enrichment.recentNews && result.enrichment.recentNews !== "No recent news available" && (
+                        <div>
+                          <h4 className="font-semibold mb-1">Recent News</h4>
+                          <p>{result.enrichment.recentNews}</p>
+                        </div>
+                      )}
                       
                       <div>
                         <h4 className="font-semibold mb-1">Pain Points</h4>
@@ -143,7 +172,7 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
             {results.map((result, index) => (
               <div
                 key={`email-${index}`}
-                className="border rounded-md overflow-hidden"
+                className="border rounded-md overflow-hidden shadow-sm"
               >
                 <div
                   className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer"
@@ -161,8 +190,20 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
                 </div>
                 
                 {expandedItems[`email-${index}`] && (
-                  <div className="p-4 text-sm">
+                  <div className="p-4 text-sm bg-white">
                     <pre className="whitespace-pre-wrap font-sans">{result.email}</pre>
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(result.email);
+                          toast.success("Email copied to clipboard");
+                        }}
+                      >
+                        Copy Email
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

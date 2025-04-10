@@ -14,6 +14,8 @@ const ApiKeyStatus = () => {
     ? `${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 5)}`
     : '';
 
+  const hasOpenAI = !!apiKey;
+
   return (
     <div className="flex justify-between items-center mt-6 pt-4 border-t">
       <div className="text-xs text-muted-foreground flex items-center gap-1">
@@ -25,6 +27,11 @@ const ApiKeyStatus = () => {
           </span>
         ) : (
           <span className="text-red-500 font-medium ml-1">Not Set</span>
+        )}
+        {hasOpenAI && (
+          <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+            OpenAI Ready
+          </span>
         )}
       </div>
       
