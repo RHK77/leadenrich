@@ -38,16 +38,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session) {
         const { user: supabaseUser } = session;
         
-        // Get user profile from Supabase
+        // Get user profile from Supabase - using custom query instead of from()
         let profile = null;
         try {
           const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', supabaseUser.id)
-            .single();
+            .rpc('get_profile_by_id', { user_id: supabaseUser.id })
+            .maybeSingle();
           
-          if (error) throw error;
+          if (error && error.code !== 'PGRST116') throw error;
           profile = data;
         } catch (error) {
           console.error('Error fetching user profile:', error);
@@ -103,10 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let profile = null;
           try {
             const { data, error } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', supabaseUser.id)
-              .single();
+              .rpc('get_profile_by_id', { user_id: supabaseUser.id })
+              .maybeSingle();
             
             if (error && error.code !== 'PGRST116') throw error;
             profile = data;
@@ -202,21 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) throw error;
         
-        // Update profile
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-              full_name: name,
-              company_name: company
-            })
-            .eq('id', data.user?.id);
-          
-          if (profileError) throw profileError;
-        } catch (profileError) {
-          console.error('Error updating profile:', profileError);
-        }
-        
+        // We'll let the database trigger handle profile creation
         resolve();
       } catch (error) {
         reject(error);
@@ -252,15 +234,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: data.fullName,
-          company_name: data.companyName,
-          contact_info: data.contactInfo,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', session.session.user.id);
+      // Use raw SQL execution instead of from()
+      const { error } = await supabase.rpc('update_user_profile', {
+        user_id: session.session.user.id,
+        full_name_param: data.fullName,
+        company_name_param: data.companyName,
+        contact_info_param: data.contactInfo
+      });
       
       if (error) throw error;
       
