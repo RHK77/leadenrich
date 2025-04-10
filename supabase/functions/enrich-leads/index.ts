@@ -26,7 +26,7 @@ serve(async (req) => {
       );
     }
 
-    const { companyName, website, additionalInfo, regenerateEmailOnly, enrichmentData, industry } = requestData;
+    const { companyName, website, additionalInfo, regenerateEmailOnly, existingEnrichmentData, industry } = requestData;
 
     if (!companyName) {
       return new Response(
@@ -45,7 +45,7 @@ serve(async (req) => {
     console.log(`Enriching data for hemp company: ${companyName}, Website: ${website || 'N/A'}`);
 
     // If we're just regenerating the email and already have enrichment data
-    if (regenerateEmailOnly && enrichmentData) {
+    if (regenerateEmailOnly && existingEnrichmentData) {
       console.log("Regenerating email only with existing enrichment data");
       
       // Create email template based on research
@@ -53,12 +53,12 @@ serve(async (req) => {
       Create a personalized outreach email to ${companyName}, which operates in the hemp industry.
       
       Based on this information about them:
-      - Description: ${enrichmentData.description || 'Unknown'}
-      - Products/Services: ${JSON.stringify(enrichmentData.productsServices || [])}
-      - Industry Challenges: ${JSON.stringify(enrichmentData.industryChallenges || [])}
-      - Pain Points: ${JSON.stringify(enrichmentData.painPoints || [])}
-      - Recent News: ${enrichmentData.recentNews || 'None available'}
-      - Hemp Specific: ${JSON.stringify(enrichmentData.hempSpecific || {})}
+      - Description: ${existingEnrichmentData.description || 'Unknown'}
+      - Products/Services: ${JSON.stringify(existingEnrichmentData.productsServices || [])}
+      - Industry Challenges: ${JSON.stringify(existingEnrichmentData.industryChallenges || [])}
+      - Pain Points: ${JSON.stringify(existingEnrichmentData.painPoints || [])}
+      - Recent News: ${existingEnrichmentData.recentNews || 'None available'}
+      - Hemp Specific: ${JSON.stringify(existingEnrichmentData.hempSpecific || {})}
       
       The email should:
       1. Have a compelling subject line relevant to hemp industry
@@ -164,10 +164,10 @@ serve(async (req) => {
     }
 
     // Parse the research content as JSON
-    let enrichmentData;
+    let companyEnrichmentData;
     try {
       const content = researchData.choices[0].message.content;
-      enrichmentData = JSON.parse(content);
+      companyEnrichmentData = JSON.parse(content);
       console.log("Successfully parsed enrichment data for hemp company");
     } catch (error) {
       console.error("Failed to parse JSON from OpenAI response:", error);
@@ -182,12 +182,12 @@ serve(async (req) => {
     Create a personalized outreach email to ${companyName}, which operates in the hemp industry.
     
     Based on this information about them:
-    - Description: ${enrichmentData.description || ''}
-    - Products/Services: ${JSON.stringify(enrichmentData.productsServices || [])}
-    - Industry Challenges: ${JSON.stringify(enrichmentData.industryChallenges || [])}
-    - Pain Points: ${JSON.stringify(enrichmentData.painPoints || [])}
-    - Recent News: ${enrichmentData.recentNews || ''}
-    - Hemp Specific Info: ${JSON.stringify(enrichmentData.hempSpecific || {})}
+    - Description: ${companyEnrichmentData.description || ''}
+    - Products/Services: ${JSON.stringify(companyEnrichmentData.productsServices || [])}
+    - Industry Challenges: ${JSON.stringify(companyEnrichmentData.industryChallenges || [])}
+    - Pain Points: ${JSON.stringify(companyEnrichmentData.painPoints || [])}
+    - Recent News: ${companyEnrichmentData.recentNews || ''}
+    - Hemp Specific Info: ${JSON.stringify(companyEnrichmentData.hempSpecific || {})}
     
     The email should:
     1. Have a compelling subject line relevant to the hemp industry
@@ -233,16 +233,16 @@ serve(async (req) => {
       company_name: companyName,
       website: website || "",
       industry: "Hemp",
-      size: enrichmentData.size || "",
-      location: enrichmentData.location || "",
+      size: companyEnrichmentData.size || "",
+      location: companyEnrichmentData.location || "",
       status: "completed",
       enrichment: {
-        description: enrichmentData.description || "",
-        productsServices: enrichmentData.productsServices || [],
-        industryChallenges: enrichmentData.industryChallenges || [],
-        recentNews: enrichmentData.recentNews || "",
-        painPoints: enrichmentData.painPoints || [],
-        hempSpecific: enrichmentData.hempSpecific || {
+        description: companyEnrichmentData.description || "",
+        productsServices: companyEnrichmentData.productsServices || [],
+        industryChallenges: companyEnrichmentData.industryChallenges || [],
+        recentNews: companyEnrichmentData.recentNews || "",
+        painPoints: companyEnrichmentData.painPoints || [],
+        hempSpecific: companyEnrichmentData.hempSpecific || {
           stateCompliance: "Unknown compliance status",
           thcContent: "<0.3% THC (presumed for compliance)",
           productsOffered: ["Hemp products"]
