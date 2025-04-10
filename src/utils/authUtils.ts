@@ -18,10 +18,12 @@ export const validateName = (name: string): boolean => {
 
 // Helper to get Supabase URL safely 
 export const getSupabaseUrl = (): string => {
-  return supabase.getUrl();
+  // Use string concatenation instead of accessing the property directly
+  return "https://ocgdnzpzhwdtthrjmcgx.supabase.co";
 };
 
 // Helper to get Supabase key safely
 export const getSupabaseKey = (): string => {
-  return supabase.supabaseKey ?? '';
+  // Use the publicly available key from the client file
+  return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jZ2RuenB6aHdkdHRocmptY2d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0ODQxNzAsImV4cCI6MjA1OTA2MDE3MH0.x_S6MhmoHZDP1w6278DmXSFjhIlLNdUSwTVjrreyIx0";
 };

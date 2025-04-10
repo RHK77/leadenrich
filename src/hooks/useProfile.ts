@@ -1,6 +1,7 @@
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseUrl, getSupabaseKey } from "@/utils/authUtils";
 
 export const useProfile = () => {
   const updateUserProfile = async (data: { fullName?: string; companyName?: string; contactInfo?: string }) => {
@@ -14,12 +15,12 @@ export const useProfile = () => {
       }
       
       // Use a direct fetch approach to bypass TypeScript issues with RPC
-      const response = await fetch(`${supabase.getUrl()}/rest/v1/rpc/update_user_profile`, {
+      const response = await fetch(`${getSupabaseUrl()}/rest/v1/rpc/update_user_profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabase.supabaseKey ?? '',
-          'Authorization': `Bearer ${supabase.supabaseKey ?? ''}`
+          'apikey': getSupabaseKey(),
+          'Authorization': `Bearer ${getSupabaseKey()}`
         },
         body: JSON.stringify({
           user_id: session.session.user.id,

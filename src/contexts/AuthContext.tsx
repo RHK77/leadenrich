@@ -4,6 +4,7 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from '@/hooks/useProfile';
 import { useLeads } from '@/hooks/useLeads';
+import { getSupabaseUrl, getSupabaseKey } from '@/utils/authUtils';
 
 type User = {
   email: string;
@@ -81,10 +82,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get user profile
       let profile = null;
       try {
-        const { data, error } = await fetchUserProfile(supabaseUser.id);
+        // Use a direct fetch approach to bypass TypeScript issues with RPC
+        const response = await fetch(`${getSupabaseUrl()}/rest/v1/rpc/get_profile_by_id`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': getSupabaseKey(),
+            'Authorization': `Bearer ${getSupabaseKey()}`
+          },
+          body: JSON.stringify({
+            user_id: supabaseUser.id
+          })
+        });
         
-        if (error && error.code !== 'PGRST116') throw error;
-        profile = data;
+        if (!response.ok) {
+          const errorText = await response.text();
+          if (response.status !== 404) { // Ignore 404 errors as it means no profile found
+            throw new Error(errorText);
+          }
+        } else {
+          profile = await response.json();
+        }
       } catch (error) {
         console.error('Error fetching user profile:', error);
       }
@@ -114,12 +132,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (userId: string) => {
     // Use a direct fetch approach to bypass TypeScript issues with RPC
-    const response = await fetch(`${supabase.getUrl()}/rest/v1/rpc/get_profile_by_id`, {
+    const response = await fetch(`${getSupabaseUrl()}/rest/v1/rpc/get_profile_by_id`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': supabase.supabaseKey ?? '',
-        'Authorization': `Bearer ${supabase.supabaseKey ?? ''}`
+        'apikey': getSupabaseKey(),
+        'Authorization': `Bearer ${getSupabaseKey()}`
       },
       body: JSON.stringify({
         user_id: userId
