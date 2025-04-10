@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useFileProcessor } from '@/hooks/useFileProcessor';
 import { UploadResults } from '@/types/upload';
 
@@ -25,7 +24,6 @@ export const UploadProvider = ({
   children: ReactNode;
   onProcessComplete: (results: UploadResults) => void;
 }) => {
-  const { checkLeadLimit, decrementLeadCount } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [notionUrl, setNotionUrl] = useState("");
   const [airtableUrl, setAirtableUrl] = useState("");
@@ -37,15 +35,10 @@ export const UploadProvider = ({
     processSampleData,
     processExternalData
   } = useFileProcessor({ 
-    decrementLeadCount, 
     onProcessComplete 
   });
 
   const processData = async () => {
-    if (!checkLeadLimit()) {
-      return;
-    }
-
     try {
       if (!selectedFile && !notionUrl && !airtableUrl) {
         await processSampleData();
@@ -55,9 +48,9 @@ export const UploadProvider = ({
       if (selectedFile) {
         await processFileData(selectedFile);
       } else if (notionUrl) {
-        await processExternalData("Notion, Inc", notionUrl);
+        await processExternalData("Hemp Database", notionUrl);
       } else if (airtableUrl) {
-        await processExternalData("Airtable", airtableUrl);
+        await processExternalData("Hemp Catalog", airtableUrl);
       }
     } catch (error) {
       console.error("Error in processData:", error);

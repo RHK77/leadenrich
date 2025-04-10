@@ -6,12 +6,10 @@ import { enrichCompany, createBasicSampleData } from '@/utils/enrichmentUtils';
 import { processFileContent } from '@/utils/fileProcessingUtils';
 
 interface UseFileProcessorProps {
-  decrementLeadCount: () => void;
   onProcessComplete: (results: UploadResults) => void;
 }
 
 export const useFileProcessor = ({ 
-  decrementLeadCount, 
   onProcessComplete
 }: UseFileProcessorProps) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -69,18 +67,23 @@ export const useFileProcessor = ({
             return {
               company_name: company.company_name,
               website: company.website || "",
-              industry: company.industry || "",
+              industry: company.industry || "Hemp",
               size: company.size || "",
               location: company.location || "",
               status: "partial",
               enrichment: {
-                description: `${company.company_name} is a company that may operate in the ${company.industry || 'business'} sector.`,
-                productsServices: ["Products/services information unavailable"],
-                industryChallenges: ["Industry challenges information unavailable"],
+                description: `${company.company_name} is a company in the hemp industry.`,
+                productsServices: ["Hemp products"],
+                industryChallenges: ["Regulatory compliance", "Banking restrictions"],
                 recentNews: "No recent news available",
-                painPoints: ["Specific pain points information unavailable"]
+                painPoints: ["Regulatory uncertainty"],
+                hempSpecific: {
+                  stateCompliance: "Unknown compliance status",
+                  thcContent: "<0.3% THC (presumed for compliance)",
+                  productsOffered: ["Hemp products"]
+                }
               },
-              email: `Subject: Introduction and Potential Collaboration\n\nDear ${company.company_name} Team,\n\nI recently came across your company and was interested in learning more about your work. I believe there might be opportunities for us to collaborate on solutions that could benefit your business.\n\nWould you be available for a brief conversation to explore potential synergies between our organizations?\n\nBest regards,\n[Your Name]\n[Your Company]\n[Contact Information]`
+              email: `Subject: Hemp Industry Solutions - Connecting with ${company.company_name}\n\nDear ${company.company_name} Team,\n\nAs fellow professionals in the hemp industry, I understand the challenges of navigating the current regulatory landscape while trying to grow a successful business.\n\nI'd love to learn more about your specific operations and discuss how our solutions might help address some of the common challenges in the industry, particularly around compliance and scaling production.\n\nWould you be open to a brief conversation this week?\n\nBest regards,\n[Your Name]\n[Your Company]\n[Contact Information]`
             };
           }
         });
@@ -91,7 +94,6 @@ export const useFileProcessor = ({
         toast.info(`Processed ${Math.min((i + batchSize), companiesData.length)} of ${companiesData.length} companies`);
       }
       
-      decrementLeadCount();
       onProcessComplete(enrichedResults);
       toast.success(`Successfully enriched ${enrichedResults.length} companies!`);
     } catch (error) {
@@ -104,24 +106,23 @@ export const useFileProcessor = ({
 
   const processSampleData = async (): Promise<void> => {
     setIsLoading(true);
-    toast.info("Getting sample data from OpenAI...");
+    toast.info("Getting sample hemp industry data...");
     
     try {
       const sampleData = await enrichCompany({ 
-        company_name: "Microsoft",
-        website: "microsoft.com"
+        company_name: "Colorado Hemp Solutions",
+        website: "coloradohempsolutions.com",
+        industry: "Hemp"
       });
       
-      decrementLeadCount();
       onProcessComplete([sampleData]);
-      toast.success("Sample data processed with AI!");
+      toast.success("Sample hemp data processed!");
     } catch (error) {
       console.error("Error processing sample data:", error);
       toast.error("Failed to process sample data with AI. Falling back to basic sample.");
       
       const basicSample = createBasicSampleData();
       
-      decrementLeadCount();
       onProcessComplete([basicSample]);
     } finally {
       setIsLoading(false);
@@ -135,12 +136,12 @@ export const useFileProcessor = ({
     try {
       const sampleCompany = {
         company_name: source,
-        website: source === "Notion, Inc" ? "notion.so" : "airtable.com"
+        website: url.includes("notion") ? "notion.so/hemp-database" : "airtable.com/hemp-catalog",
+        industry: "Hemp"
       };
       
       const enrichedData = await enrichCompany(sampleCompany);
       
-      decrementLeadCount();
       onProcessComplete([enrichedData]);
       toast.success(`Successfully processed ${source} data!`);
     } catch (error) {

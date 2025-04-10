@@ -5,47 +5,47 @@ import FeatureDetail from "@/components/FeatureDetail";
 const AIEmailFeature = () => {
   return (
     <FeatureDetail
-      title="AI Email Generation"
+      title="Hemp Industry AI Email Generation"
       icon="✉️"
-      description="Our AI Email Generation feature leverages advanced artificial intelligence to create highly personalized outreach emails tailored to each prospect. Using the enriched data from your leads, the system crafts compelling messages that address specific pain points, reference relevant industry challenges, and position your solution in the most effective way possible. Each email feels like it was written specifically for the recipient, dramatically increasing response rates."
+      description="Our Hemp Industry AI Email Generation feature leverages advanced artificial intelligence to create highly personalized outreach emails tailored to each hemp prospect. Using the enriched data from your leads, the system crafts compelling messages that address specific hemp industry pain points like regulatory compliance, banking restrictions, extraction efficiency, and quality control. Each email references relevant details about cultivation methods, certifications, and product offerings, dramatically increasing response rates from hemp businesses."
       benefits={[
-        "Generate dozens of personalized emails in minutes instead of hours",
-        "Create outreach that references specific company challenges and needs",
-        "Improve email response rates with relevant, personalized content",
-        "Maintain consistent messaging while personalizing at scale",
-        "Test different approaches with AI-generated variations",
-        "Eliminate writer's block with intelligent suggestions and templates"
+        "Generate dozens of hemp-industry personalized emails in minutes instead of hours",
+        "Create outreach that references specific compliance challenges and certification needs",
+        "Improve email response rates with relevant, hemp-specific content",
+        "Address unique hemp industry concerns like banking access, interstate commerce, and testing",
+        "Test different approaches with AI-generated variations tailored to hemp businesses",
+        "Reference appropriate industry terminology around cultivation, extraction, and product types"
       ]}
       useCases={[
         {
-          title: "Cold Outreach",
-          description: "Generate personalized initial emails that stand out in crowded inboxes by addressing specific business challenges"
+          title: "Hemp Processor Outreach",
+          description: "Generate personalized initial emails that address specific extraction methods and efficiency concerns"
         },
         {
-          title: "Follow-up Sequences",
-          description: "Create contextual follow-up emails that build on previous interactions and provide additional value"
+          title: "Compliance Solution Marketing",
+          description: "Create contextual emails that highlight how your solutions address specific state compliance requirements"
         },
         {
-          title: "Account Expansions",
-          description: "Craft personalized messages to different stakeholders within existing customer organizations"
+          title: "Hemp Testing Lab Partnerships",
+          description: "Craft personalized messages to different hemp companies based on their testing needs and product types"
         },
         {
-          title: "Event Invitations",
-          description: "Generate compelling invitations that explain why your event is relevant to each prospect's specific situation"
+          title: "Industry Event Invitations",
+          description: "Generate compelling hemp conference or webinar invitations that explain relevance to each prospect's specific situation"
         },
         {
-          title: "Product Announcements",
-          description: "Create targeted announcements that emphasize features most relevant to each recipient's needs"
+          title: "Hemp Equipment Sales",
+          description: "Create targeted announcements that emphasize how equipment features solve specific hemp cultivation or processing challenges"
         },
         {
-          title: "Reengagement Campaigns",
-          description: "Develop personalized messages that reconnect with dormant leads based on their current situation"
+          title: "Sustainability Messaging",
+          description: "Develop personalized messages that connect your sustainable solutions with each hemp company's existing practices"
         }
       ]}
       testimonial={{
-        quote: "The AI-generated emails are remarkably good - they sound natural and reference specific aspects of our prospects' businesses. We've seen our response rates increase by 37% since implementing this feature.",
-        author: "Michael Chen",
-        company: "Marketing Director, GrowthWorks"
+        quote: "The AI-generated emails are remarkably knowledgeable about hemp industry specifics - they reference cultivation methods, extract types, and compliance challenges that resonate with our prospects. Our response rates have increased by 42% since implementing this feature.",
+        author: "Sarah Wilson",
+        company: "Marketing Director, Hemp Industry Association"
       }}
     />
   );

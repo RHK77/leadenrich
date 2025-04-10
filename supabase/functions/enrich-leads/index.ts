@@ -26,7 +26,7 @@ serve(async (req) => {
       );
     }
 
-    const { companyName, website, additionalInfo, regenerateEmailOnly, enrichmentData } = requestData;
+    const { companyName, website, additionalInfo, regenerateEmailOnly, enrichmentData, industry } = requestData;
 
     if (!companyName) {
       return new Response(
@@ -42,7 +42,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Enriching data for: ${companyName}, Website: ${website || 'N/A'}`);
+    console.log(`Enriching data for hemp company: ${companyName}, Website: ${website || 'N/A'}`);
 
     // If we're just regenerating the email and already have enrichment data
     if (regenerateEmailOnly && enrichmentData) {
@@ -50,7 +50,7 @@ serve(async (req) => {
       
       // Create email template based on research
       const emailPrompt = `
-      Create a personalized outreach email to ${companyName}, which operates in the ${enrichmentData.industry || 'business'} industry.
+      Create a personalized outreach email to ${companyName}, which operates in the hemp industry.
       
       Based on this information about them:
       - Description: ${enrichmentData.description || 'Unknown'}
@@ -58,16 +58,17 @@ serve(async (req) => {
       - Industry Challenges: ${JSON.stringify(enrichmentData.industryChallenges || [])}
       - Pain Points: ${JSON.stringify(enrichmentData.painPoints || [])}
       - Recent News: ${enrichmentData.recentNews || 'None available'}
+      - Hemp Specific: ${JSON.stringify(enrichmentData.hempSpecific || {})}
       
       The email should:
-      1. Have a compelling subject line
-      2. Start with a personal observation about their business or recent development
-      3. Address 1-2 specific pain points they might have
+      1. Have a compelling subject line relevant to hemp industry
+      2. Start with a personal observation about their hemp business or recent development
+      3. Address 1-2 specific pain points they might have in the hemp industry
       4. Briefly suggest how your solution could help with these pain points
       5. End with a soft call to action for a meeting or call
       6. Include placeholders for the sender's information as [Your Name], [Your Company], and [Contact Information]
       
-      Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. NEVER use phrases like "unknown industry" or "unknown location" - if you don't have info, craft the email without mentioning those aspects. Keep it under 200 words.`;
+      Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. Reference specific hemp industry terminology where appropriate. NEVER use phrases like "unknown industry" or "unknown location" - if you don't have info, craft the email without mentioning those aspects. Keep it under 200 words.`;
 
       // Request to OpenAI for personalized email
       const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -79,7 +80,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You are an expert B2B sales copywriter who creates personalized outreach emails based on company research. Your emails are specific, concise, and compelling. If information isn\'t available, craft around it rather than mentioning the absence of information.' },
+            { role: 'system', content: 'You are an expert B2B sales copywriter specializing in the hemp industry. You create personalized outreach emails based on company research. Your emails are specific to hemp businesses, addressing their unique challenges in compliance, banking, supply chain, and market access. Use appropriate industry terminology for CBD, extraction methods, cultivation, etc.' },
             { role: 'user', content: emailPrompt }
           ],
           temperature: 0.7, // Slightly higher temperature for creativity in writing
@@ -106,7 +107,7 @@ serve(async (req) => {
     }
 
     // Create a detailed prompt for OpenAI based on available information
-    let researchPrompt = `Research the company "${companyName}"`;
+    let researchPrompt = `Research the hemp company "${companyName}"`;
     if (website) {
       researchPrompt += ` with website ${website}`;
     }
@@ -115,16 +116,24 @@ serve(async (req) => {
     }
     
     researchPrompt += `. Provide the following information in JSON format:
-    1. A detailed description of what the company does (1-2 paragraphs)
-    2. Their main products or services (as array of strings)
-    3. The industry they operate in
-    4. Common challenges companies in this industry face (as array of strings)
-    5. Any recent news or developments about the company if available
-    6. Likely pain points they might have (as array of strings)
-    7. Their company size if known
-    8. Their location if known
+    1. A detailed description of what the hemp company does (1-2 paragraphs)
+    2. Their main hemp products or services (as array of strings)
+    3. Common challenges hemp companies in this industry face (as array of strings)
+    4. Any recent news or developments about the company if available
+    5. Likely pain points they might have as a hemp business (as array of strings)
+    6. Their company size if known
+    7. Their location if known
+    8. Hemp-specific information including:
+       - Cultivation methods they use (array of strings)
+       - Any certifications they have (array of strings)
+       - THC content in their products (string)
+       - CBD content in their products (string)
+       - Products offered (array of strings)
+       - Extraction methods used (array of strings)
+       - Sustainability practices (array of strings)
+       - State compliance status (string)
     
-    Format your response as valid JSON with these keys: description, productsServices, industry, industryChallenges, recentNews, painPoints, size, location.
+    Format your response as valid JSON with these keys: description, productsServices, industryChallenges, recentNews, painPoints, size, location, hempSpecific (with nested keys for hemp-specific information).
     Only include verifiable information. If any information is not available or uncertain, omit that field from the JSON rather than guessing or writing "unknown".`;
 
     // Request to OpenAI for company research
@@ -137,7 +146,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are a business intelligence researcher who provides accurate, factual information about companies. Respond ONLY with the requested JSON format. Never use "unknown" in your responses - simply omit fields where data isn\'t available.' },
+          { role: 'system', content: 'You are a business intelligence researcher who specializes in the hemp industry. You provide accurate, factual information about hemp companies. Respond ONLY with the requested JSON format. Never use "unknown" in your responses - simply omit fields where data isn\'t available.' },
           { role: 'user', content: researchPrompt }
         ],
         temperature: 0.3, // Lower temperature for more factual responses
@@ -159,7 +168,7 @@ serve(async (req) => {
     try {
       const content = researchData.choices[0].message.content;
       enrichmentData = JSON.parse(content);
-      console.log("Successfully parsed enrichment data");
+      console.log("Successfully parsed enrichment data for hemp company");
     } catch (error) {
       console.error("Failed to parse JSON from OpenAI response:", error);
       return new Response(
@@ -168,9 +177,9 @@ serve(async (req) => {
       );
     }
 
-    // Create email template based on research
+    // Create email template based on hemp industry research
     const emailPrompt = `
-    Create a personalized outreach email to ${companyName}, which operates in the ${enrichmentData.industry || 'business'} industry.
+    Create a personalized outreach email to ${companyName}, which operates in the hemp industry.
     
     Based on this information about them:
     - Description: ${enrichmentData.description || ''}
@@ -178,16 +187,17 @@ serve(async (req) => {
     - Industry Challenges: ${JSON.stringify(enrichmentData.industryChallenges || [])}
     - Pain Points: ${JSON.stringify(enrichmentData.painPoints || [])}
     - Recent News: ${enrichmentData.recentNews || ''}
+    - Hemp Specific Info: ${JSON.stringify(enrichmentData.hempSpecific || {})}
     
     The email should:
-    1. Have a compelling subject line
-    2. Start with a personal observation about their business or recent development
-    3. Address 1-2 specific pain points they might have
-    4. Briefly suggest how your solution could help with these pain points
+    1. Have a compelling subject line relevant to the hemp industry
+    2. Start with a personal observation about their hemp business or recent development
+    3. Address 1-2 specific pain points they might have in the hemp industry
+    4. Briefly suggest how your solution could help with these hemp-specific pain points
     5. End with a soft call to action for a meeting or call
     6. Include placeholders for the sender's information as [Your Name], [Your Company], and [Contact Information]
     
-    Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. NEVER use phrases like "unknown industry" or "unknown location" - if you don't have info, craft the email without mentioning those aspects. Keep it under 200 words.`;
+    Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. Reference specific hemp industry terminology where appropriate. NEVER use phrases like "unknown industry" or "unknown location" - if you don't have info, craft the email without mentioning those aspects. Keep it under 200 words.`;
 
     // Request to OpenAI for personalized email
     const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -199,7 +209,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are an expert B2B sales copywriter who creates personalized outreach emails based on company research. Your emails are specific, concise, and compelling. If information isn\'t available, craft around it rather than mentioning the absence of information.' },
+          { role: 'system', content: 'You are an expert B2B sales copywriter specializing in the hemp industry. You create personalized outreach emails based on company research. Your emails are specific to hemp businesses, addressing their unique challenges in compliance, banking, supply chain, and market access. Use appropriate industry terminology for CBD, extraction methods, cultivation, etc.' },
           { role: 'user', content: emailPrompt }
         ],
         temperature: 0.7, // Slightly higher temperature for creativity in writing
@@ -222,7 +232,7 @@ serve(async (req) => {
     const result = {
       company_name: companyName,
       website: website || "",
-      industry: enrichmentData.industry || "",
+      industry: "Hemp",
       size: enrichmentData.size || "",
       location: enrichmentData.location || "",
       status: "completed",
@@ -231,7 +241,12 @@ serve(async (req) => {
         productsServices: enrichmentData.productsServices || [],
         industryChallenges: enrichmentData.industryChallenges || [],
         recentNews: enrichmentData.recentNews || "",
-        painPoints: enrichmentData.painPoints || []
+        painPoints: enrichmentData.painPoints || [],
+        hempSpecific: enrichmentData.hempSpecific || {
+          stateCompliance: "Unknown compliance status",
+          thcContent: "<0.3% THC (presumed for compliance)",
+          productsOffered: ["Hemp products"]
+        }
       },
       email: personalizedEmail
     };
