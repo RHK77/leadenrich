@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Download, MessageSquare, Building, Globe, MapPin, Users, Tag } from "lucide-react";
+import { 
+  ChevronDown, ChevronUp, Download, MessageSquare, Building, 
+  Globe, MapPin, Users, Tag, Copy, Send, Edit, RefreshCcw 
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 type Result = {
   company_name: string;
@@ -22,6 +27,7 @@ type Result = {
     painPoints: string[];
   };
   email: string;
+  id?: string;
 };
 
 type ResultsDisplayProps = {
@@ -29,7 +35,10 @@ type ResultsDisplayProps = {
 };
 
 const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
+  const { user } = useAuth();
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+  const [isRegenerating, setIsRegenerating] = useState<Record<string, boolean>>({});
+  const [editableEmail, setEditableEmail] = useState<Record<string, string>>({});
 
   const toggleItem = (id: string) => {
     setExpandedItems((prev) => ({
@@ -49,6 +58,94 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Results downloaded successfully");
+  };
+
+  const handleEmailCopy = (email: string) => {
+    navigator.clipboard.writeText(email);
+    toast.success("Email copied to clipboard");
+  };
+
+  const handleEmailSend = (email: string, company: string) => {
+    const subject = email.split('\n')[0].replace('Subject: ', '');
+    const body = email.split('\n').slice(1).join('\n');
+    
+    // Replace placeholder with user's info
+    const processedBody = body
+      .replace('[Your Name]', user?.fullName || user?.name || '')
+      .replace('[Your Company]', user?.companyName || user?.company || '')
+      .replace('[Contact Information]', user?.contactInfo || '');
+    
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(processedBody)}`;
+    window.open(mailtoUrl);
+  };
+
+  const handleEmailEdit = (index: string, initialEmail: string) => {
+    if (!editableEmail[index]) {
+      setEditableEmail({
+        ...editableEmail,
+        [index]: initialEmail
+      });
+    }
+  };
+
+  const handleEmailRegenerate = async (index: number, companyData: Result) => {
+    const emailId = `email-${index}`;
+    setIsRegenerating({
+      ...isRegenerating,
+      [emailId]: true
+    });
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-leads', {
+        body: {
+          companyName: companyData.company_name,
+          website: companyData.website || "",
+          additionalInfo: `${companyData.industry || ""} ${companyData.location || ""} ${companyData.size || ""}`,
+          regenerateEmailOnly: true,
+          enrichmentData: companyData.enrichment
+        }
+      });
+
+      if (error) throw error;
+      
+      // Update only the email content
+      results[index].email = data.email;
+      
+      // Reset the editable email if it exists
+      if (editableEmail[emailId]) {
+        setEditableEmail({
+          ...editableEmail,
+          [emailId]: data.email
+        });
+      }
+      
+      toast.success("Email regenerated successfully");
+    } catch (error) {
+      console.error("Error regenerating email:", error);
+      toast.error("Failed to regenerate email");
+    } finally {
+      setIsRegenerating({
+        ...isRegenerating,
+        [emailId]: false
+      });
+    }
+  };
+
+  const saveEditedEmail = (index: string) => {
+    const resultIndex = parseInt(index.split('-')[1]);
+    if (results[resultIndex] && editableEmail[index]) {
+      results[resultIndex].email = editableEmail[index];
+      toast.success("Email saved");
+    }
+  };
+
+  const processEmailWithUserInfo = (email: string) => {
+    if (!user) return email;
+    
+    return email
+      .replace('[Your Name]', user.fullName || user.name || '[Your Name]')
+      .replace('[Your Company]', user.companyName || user.company || '[Your Company]')
+      .replace('[Contact Information]', user.contactInfo || '[Contact Information]');
   };
 
   if (results.length === 0) {
@@ -191,17 +288,78 @@ const ResultsDisplay = ({ results }: ResultsDisplayProps) => {
                 
                 {expandedItems[`email-${index}`] && (
                   <div className="p-4 text-sm bg-white">
-                    <pre className="whitespace-pre-wrap font-sans">{result.email}</pre>
-                    <div className="mt-4 flex justify-end">
+                    {editableEmail[`email-${index}`] ? (
+                      <div className="mb-4">
+                        <textarea
+                          value={editableEmail[`email-${index}`]}
+                          onChange={(e) => setEditableEmail({
+                            ...editableEmail,
+                            [`email-${index}`]: e.target.value
+                          })}
+                          className="w-full h-64 p-3 border rounded-md font-mono text-sm"
+                        />
+                        <div className="flex justify-end mt-2 space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setEditableEmail({
+                                ...editableEmail,
+                                [`email-${index}`]: undefined
+                              });
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => saveEditedEmail(`email-${index}`)}
+                          >
+                            Save Changes
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <pre className="whitespace-pre-wrap font-sans">{processEmailWithUserInfo(result.email)}</pre>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(result.email);
-                          toast.success("Email copied to clipboard");
-                        }}
+                        onClick={() => handleEmailCopy(processEmailWithUserInfo(result.email))}
+                        className="flex items-center"
                       >
-                        Copy Email
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        Copy
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEmailSend(result.email, result.company_name)}
+                        className="flex items-center"
+                      >
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                        Send
+                      </Button>
+                      <Button
+                        variant={editableEmail[`email-${index}`] ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleEmailEdit(`email-${index}`, result.email)}
+                        className="flex items-center"
+                      >
+                        <Edit className="h-3.5 w-3.5 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isRegenerating[`email-${index}`]}
+                        onClick={() => handleEmailRegenerate(index, result)}
+                        className="flex items-center"
+                      >
+                        <RefreshCcw className={`h-3.5 w-3.5 mr-1 ${isRegenerating[`email-${index}`] ? "animate-spin" : ""}`} />
+                        {isRegenerating[`email-${index}`] ? "Regenerating..." : "Regenerate"}
                       </Button>
                     </div>
                   </div>

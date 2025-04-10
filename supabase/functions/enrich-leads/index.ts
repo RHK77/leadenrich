@@ -16,7 +16,17 @@ serve(async (req) => {
   }
 
   try {
-    const { companyName, website, additionalInfo } = await req.json();
+    const requestData = await req.json();
+    
+    // Check if this is just an API key status check
+    if (requestData.checkApiKeyStatus) {
+      return new Response(
+        JSON.stringify({ hasOpenAIKey: !!openAIApiKey }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { companyName, website, additionalInfo, regenerateEmailOnly, enrichmentData } = requestData;
 
     if (!companyName) {
       return new Response(
@@ -33,6 +43,67 @@ serve(async (req) => {
     }
 
     console.log(`Enriching data for: ${companyName}, Website: ${website || 'N/A'}`);
+
+    // If we're just regenerating the email and already have enrichment data
+    if (regenerateEmailOnly && enrichmentData) {
+      console.log("Regenerating email only with existing enrichment data");
+      
+      // Create email template based on research
+      const emailPrompt = `
+      Create a personalized outreach email to ${companyName}, which operates in the ${enrichmentData.industry || 'business'} industry.
+      
+      Based on this information about them:
+      - Description: ${enrichmentData.description || 'Unknown'}
+      - Products/Services: ${JSON.stringify(enrichmentData.productsServices || [])}
+      - Industry Challenges: ${JSON.stringify(enrichmentData.industryChallenges || [])}
+      - Pain Points: ${JSON.stringify(enrichmentData.painPoints || [])}
+      - Recent News: ${enrichmentData.recentNews || 'None available'}
+      
+      The email should:
+      1. Have a compelling subject line
+      2. Start with a personal observation about their business or recent development
+      3. Address 1-2 specific pain points they might have
+      4. Briefly suggest how your solution could help with these pain points
+      5. End with a soft call to action for a meeting or call
+      6. Include placeholders for the sender's information as [Your Name], [Your Company], and [Contact Information]
+      
+      Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. NEVER use phrases like "unknown industry" or "unknown location" - if you don't have info, craft the email without mentioning those aspects. Keep it under 200 words.`;
+
+      // Request to OpenAI for personalized email
+      const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are an expert B2B sales copywriter who creates personalized outreach emails based on company research. Your emails are specific, concise, and compelling. If information isn\'t available, craft around it rather than mentioning the absence of information.' },
+            { role: 'user', content: emailPrompt }
+          ],
+          temperature: 0.7, // Slightly higher temperature for creativity in writing
+        }),
+      });
+
+      const emailData = await emailResponse.json();
+      
+      if (!emailData.choices || emailData.choices.length === 0) {
+        console.error("Unexpected response from OpenAI for email:", emailData);
+        return new Response(
+          JSON.stringify({ error: "Failed to generate email" }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const personalizedEmail = emailData.choices[0].message.content;
+      
+      // Return just the email
+      return new Response(
+        JSON.stringify({ email: personalizedEmail }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Create a detailed prompt for OpenAI based on available information
     let researchPrompt = `Research the company "${companyName}"`;
@@ -54,7 +125,7 @@ serve(async (req) => {
     8. Their location if known
     
     Format your response as valid JSON with these keys: description, productsServices, industry, industryChallenges, recentNews, painPoints, size, location.
-    Only include verifiable information. If any information is not available or uncertain, omit that field from the JSON rather than guessing.`;
+    Only include verifiable information. If any information is not available or uncertain, omit that field from the JSON rather than guessing or writing "unknown".`;
 
     // Request to OpenAI for company research
     const researchResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -66,7 +137,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are a business intelligence researcher who provides accurate, factual information about companies. Respond ONLY with the requested JSON format.' },
+          { role: 'system', content: 'You are a business intelligence researcher who provides accurate, factual information about companies. Respond ONLY with the requested JSON format. Never use "unknown" in your responses - simply omit fields where data isn\'t available.' },
           { role: 'user', content: researchPrompt }
         ],
         temperature: 0.3, // Lower temperature for more factual responses
@@ -102,11 +173,11 @@ serve(async (req) => {
     Create a personalized outreach email to ${companyName}, which operates in the ${enrichmentData.industry || 'business'} industry.
     
     Based on this information about them:
-    - Description: ${enrichmentData.description || 'Unknown'}
+    - Description: ${enrichmentData.description || ''}
     - Products/Services: ${JSON.stringify(enrichmentData.productsServices || [])}
     - Industry Challenges: ${JSON.stringify(enrichmentData.industryChallenges || [])}
     - Pain Points: ${JSON.stringify(enrichmentData.painPoints || [])}
-    - Recent News: ${enrichmentData.recentNews || 'None available'}
+    - Recent News: ${enrichmentData.recentNews || ''}
     
     The email should:
     1. Have a compelling subject line
@@ -114,9 +185,9 @@ serve(async (req) => {
     3. Address 1-2 specific pain points they might have
     4. Briefly suggest how your solution could help with these pain points
     5. End with a soft call to action for a meeting or call
-    6. Include placeholders for the sender's information
+    6. Include placeholders for the sender's information as [Your Name], [Your Company], and [Contact Information]
     
-    Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. Keep it under 200 words.`;
+    Write this email as if it's ready to send - make it sound natural and conversational, not like a template. Don't use placeholders for the company information, use what you know. NEVER use phrases like "unknown industry" or "unknown location" - if you don't have info, craft the email without mentioning those aspects. Keep it under 200 words.`;
 
     // Request to OpenAI for personalized email
     const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -128,7 +199,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'You are an expert B2B sales copywriter who creates personalized outreach emails based on company research. Your emails are specific, concise, and compelling.' },
+          { role: 'system', content: 'You are an expert B2B sales copywriter who creates personalized outreach emails based on company research. Your emails are specific, concise, and compelling. If information isn\'t available, craft around it rather than mentioning the absence of information.' },
           { role: 'user', content: emailPrompt }
         ],
         temperature: 0.7, // Slightly higher temperature for creativity in writing

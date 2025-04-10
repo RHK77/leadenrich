@@ -6,8 +6,10 @@ import WorkflowDiagram from "@/components/dashboard/WorkflowDiagram";
 import WorkflowSteps from "@/components/dashboard/WorkflowSteps";
 import FileUpload from "@/components/dashboard/FileUpload";
 import ResultsDisplay from "@/components/dashboard/ResultsDisplay";
+import ProfileSettings from "@/components/ProfileSettings";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   const [results, setResults] = useState<any[]>([]);
@@ -53,31 +55,46 @@ const Dashboard = () => {
           Upload your CSV data and generate personalized B2B emails
         </p>
         
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <WorkflowDiagram />
-          </div>
-          <div>
-            <WorkflowSteps />
-          </div>
-        </div>
-        
-        <div className="mb-8">
-          <FileUpload onProcessComplete={handleProcessComplete} />
-        </div>
-        
-        {isLoading && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-lg font-medium">Processing your data with AI...</p>
-          </div>
-        )}
-        
-        {results.length > 0 && (
-          <div>
-            <ResultsDisplay results={results} />
-          </div>
-        )}
+        <Tabs defaultValue="workflow">
+          <TabsList className="mb-6">
+            <TabsTrigger value="workflow">Lead Enrichment</TabsTrigger>
+            <TabsTrigger value="profile">Your Profile</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="workflow">
+            <div className="grid lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-2">
+                <WorkflowDiagram />
+              </div>
+              <div>
+                <WorkflowSteps />
+              </div>
+            </div>
+            
+            <div className="mb-8">
+              <FileUpload onProcessComplete={handleProcessComplete} />
+            </div>
+            
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-lg font-medium">Processing your data with AI...</p>
+              </div>
+            )}
+            
+            {results.length > 0 && (
+              <div>
+                <ResultsDisplay results={results} />
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="profile">
+            <div className="max-w-md mx-auto">
+              <ProfileSettings />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
