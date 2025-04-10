@@ -41,8 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Get user profile from Supabase - using custom query instead of from()
         let profile = null;
         try {
-          const { data, error } = await supabase
-            .rpc('get_profile_by_id', { user_id: supabaseUser.id })
+          // Type casting to handle the TypeScript error
+          const { data, error } = await (supabase
+            .rpc('get_profile_by_id', { user_id: supabaseUser.id }) as any)
             .maybeSingle();
           
           if (error && error.code !== 'PGRST116') throw error;
@@ -100,8 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Get user profile
           let profile = null;
           try {
-            const { data, error } = await supabase
-              .rpc('get_profile_by_id', { user_id: supabaseUser.id })
+            // Type casting to handle the TypeScript error
+            const { data, error } = await (supabase
+              .rpc('get_profile_by_id', { user_id: supabaseUser.id }) as any)
               .maybeSingle();
             
             if (error && error.code !== 'PGRST116') throw error;
@@ -234,13 +236,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Use raw SQL execution instead of from()
-      const { error } = await supabase.rpc('update_user_profile', {
+      // Use raw SQL execution instead of from() with proper TypeScript casting
+      const { error } = await (supabase.rpc('update_user_profile', {
         user_id: session.session.user.id,
         full_name_param: data.fullName,
         company_name_param: data.companyName,
         contact_info_param: data.contactInfo
-      });
+      }) as any);
       
       if (error) throw error;
       
