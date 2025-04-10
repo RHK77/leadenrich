@@ -38,21 +38,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session) {
         const { user: supabaseUser } = session;
         
-        // Get user profile from Supabase - using custom query with proper casting
+        // Get user profile from Supabase
         let profile = null;
         try {
-          const { data, error } = await supabase.rpc(
+          // Use a more direct approach that works with TypeScript
+          const response = await supabase.rpc(
             'get_profile_by_id', 
-            { user_id: supabaseUser.id }
-          )
-          .then(response => ({
-            ...response,
-            maybeSingle: () => response
-          }))
-          .then(response => response.maybeSingle());
+            { user_id: supabaseUser.id } as any
+          );
           
-          if (error && error.code !== 'PGRST116') throw error;
-          profile = data;
+          if (response.error && response.error.code !== 'PGRST116') throw response.error;
+          profile = response.data;
         } catch (error) {
           console.error('Error fetching user profile:', error);
         }
@@ -103,21 +99,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN' && session) {
           const { user: supabaseUser } = session;
           
-          // Get user profile with proper casting
+          // Get user profile
           let profile = null;
           try {
-            const { data, error } = await supabase.rpc(
+            // Use a more direct approach that works with TypeScript
+            const response = await supabase.rpc(
               'get_profile_by_id', 
-              { user_id: supabaseUser.id }
-            )
-            .then(response => ({
-              ...response,
-              maybeSingle: () => response
-            }))
-            .then(response => response.maybeSingle());
+              { user_id: supabaseUser.id } as any
+            );
             
-            if (error && error.code !== 'PGRST116') throw error;
-            profile = data;
+            if (response.error && response.error.code !== 'PGRST116') throw response.error;
+            profile = response.data;
           } catch (error) {
             console.error('Error fetching user profile:', error);
           }
@@ -246,26 +238,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Use a direct fetch approach to bypass TypeScript issues with RPC
-      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/update_user_profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`
-        },
-        body: JSON.stringify({
+      // Use direct RPC call with proper typing
+      const { error } = await supabase.rpc(
+        'update_user_profile',
+        {
           user_id: session.session.user.id,
           full_name_param: data.fullName,
           company_name_param: data.companyName,
           contact_info_param: data.contactInfo
-        })
-      });
+        } as any
+      );
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile');
-      }
+      if (error) throw error;
       
       // Update local user state
       setUser(prevUser => {
