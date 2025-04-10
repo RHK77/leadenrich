@@ -3,24 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { ArrowRight, FileText, Upload, Sparkles, BarChart, X, CheckCircle, Calendar } from "lucide-react";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import CalComWidget from "@/components/CalComWidget";
-
 const Index = () => {
   const navigate = useNavigate();
   const [showPromo, setShowPromo] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [countdown, setCountdown] = useState(300); // 5 minutes in seconds
   const [promoViewed, setPromoViewed] = useState(false);
-
   useEffect(() => {
     // Show promo after 3 seconds
     const timer = setTimeout(() => {
@@ -31,17 +22,14 @@ const Index = () => {
         localStorage.setItem("promoViewed", "true");
       }
     }, 3000);
-
     return () => clearTimeout(timer);
   }, []);
-
   useEffect(() => {
     // Countdown timer
     let interval: number | undefined;
-    
     if (showPromo) {
       interval = window.setInterval(() => {
-        setCountdown((prev) => {
+        setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(interval);
             return 0;
@@ -50,67 +38,37 @@ const Index = () => {
         });
       }, 1000);
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [showPromo]);
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' + secs : secs}`;
   };
-
-  const features = [
-    {
-      title: "CSV Upload",
-      description: "Upload your company data in CSV format for easy processing",
-      icon: <Upload className="h-10 w-10 text-black" />,
-      benefits: [
-        "One-click import of all your lead data",
-        "Automatic field mapping saves time",
-        "No data loss with validation checks",
-        "Direct integration with your CRM"
-      ]
-    },
-    {
-      title: "AI Enrichment",
-      description: "Leverage OpenAI to gather detailed insights about target companies",
-      icon: <Sparkles className="h-10 w-10 text-black" />,
-      benefits: [
-        "Discover hidden company insights instantly",
-        "Get detailed company profiles automatically",
-        "Identify key decision makers with ease",
-        "Uncover competitive intelligence"
-      ]
-    },
-    {
-      title: "Email Generation",
-      description: "Create personalized B2B sales emails using AI technology",
-      icon: <FileText className="h-10 w-10 text-black" />,
-      benefits: [
-        "Generate human-like outreach messages",
-        "Personalize at scale with no effort",
-        "Increase open rates with targeted content",
-        "A/B test different approaches automatically"
-      ]
-    },
-    {
-      title: "Performance Analytics",
-      description: "Track and analyze your email campaign performance",
-      icon: <BarChart className="h-10 w-10 text-black" />,
-      benefits: [
-        "Real-time tracking of email performance",
-        "Conversion rate analysis by industry",
-        "Identify best-performing message styles",
-        "Export reports for stakeholder review"
-      ]
-    },
-  ];
-
-  return (
-    <div className="min-h-screen flex flex-col bg-white text-black">
+  const features = [{
+    title: "CSV Upload",
+    description: "Upload your company data in CSV format for easy processing",
+    icon: <Upload className="h-10 w-10 text-black" />,
+    benefits: ["One-click import of all your lead data", "Automatic field mapping saves time", "No data loss with validation checks", "Direct integration with your CRM"]
+  }, {
+    title: "AI Enrichment",
+    description: "Leverage OpenAI to gather detailed insights about target companies",
+    icon: <Sparkles className="h-10 w-10 text-black" />,
+    benefits: ["Discover hidden company insights instantly", "Get detailed company profiles automatically", "Identify key decision makers with ease", "Uncover competitive intelligence"]
+  }, {
+    title: "Email Generation",
+    description: "Create personalized B2B sales emails using AI technology",
+    icon: <FileText className="h-10 w-10 text-black" />,
+    benefits: ["Generate human-like outreach messages", "Personalize at scale with no effort", "Increase open rates with targeted content", "A/B test different approaches automatically"]
+  }, {
+    title: "Performance Analytics",
+    description: "Track and analyze your email campaign performance",
+    icon: <BarChart className="h-10 w-10 text-black" />,
+    benefits: ["Real-time tracking of email performance", "Conversion rate analysis by industry", "Identify best-performing message styles", "Export reports for stakeholder review"]
+  }];
+  return <div className="min-h-screen flex flex-col bg-white text-black">
       <Navbar />
       
       <main className="flex-1">
@@ -127,39 +85,22 @@ const Index = () => {
 
               {/* Hero video */}
               <div className="mb-8 rounded-xl overflow-hidden shadow-xl">
-                <video 
-                  className="w-full aspect-video object-cover"
-                  controls
-                  poster="/placeholder.svg"
-                >
+                <video className="w-full aspect-video object-cover" controls poster="/placeholder.svg">
                   <source src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  size="lg" 
-                  className="gap-2 bg-black hover:bg-gray-800 text-white"
-                  onClick={() => navigate("/signup")}
-                >
+                <Button size="lg" className="gap-2 bg-black hover:bg-gray-800 text-white" onClick={() => navigate("/signup")}>
                   Get Started <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  className="border-black text-black hover:bg-gray-100"
-                  onClick={() => navigate("/dashboard")}
-                >
+                <Button variant="outline" size="lg" className="border-black text-black hover:bg-gray-100" onClick={() => navigate("/dashboard")}>
                   View Demo
                 </Button>
                 <Popover open={showCalendar} onOpenChange={setShowCalendar}>
                   <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="lg"
-                      className="border-black text-black hover:bg-gray-100"
-                    >
+                    <Button variant="outline" size="lg" className="border-black text-black hover:bg-gray-100">
                       <Calendar className="h-4 w-4 mr-2" /> Schedule Demo
                     </Button>
                   </PopoverTrigger>
@@ -220,8 +161,7 @@ const Index = () => {
                 <h3 className="text-2xl font-bold mt-8 mb-4">Key Benefits That Drive Results</h3>
                 
                 <div className="space-y-4 mb-8">
-                  {features.map((feature, index) => (
-                    <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
+                  {features.map((feature, index) => <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
                       <div className="flex items-center mb-4">
                         <div className="mr-4 bg-gray-100 p-3 rounded-full">
                           {feature.icon}
@@ -230,15 +170,12 @@ const Index = () => {
                       </div>
                       <p className="mb-4">{feature.description}</p>
                       <ul className="space-y-2">
-                        {feature.benefits.map((benefit, idx) => (
-                          <li key={idx} className="flex items-start">
+                        {feature.benefits.map((benefit, idx) => <li key={idx} className="flex items-start">
                             <CheckCircle className="h-5 w-5 text-green-500 mr-2 shrink-0 mt-0.5" />
                             <span>{benefit}</span>
-                          </li>
-                        ))}
+                          </li>)}
                       </ul>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
                 
                 <div className="bg-black text-white p-8 rounded-lg mb-8">
@@ -266,11 +203,7 @@ const Index = () => {
               </div>
               
               <div className="text-center">
-                <Button 
-                  size="lg" 
-                  className="gap-2 bg-black hover:bg-gray-800 text-white"
-                  onClick={() => navigate("/signup")}
-                >
+                <Button size="lg" className="gap-2 bg-black hover:bg-gray-800 text-white" onClick={() => navigate("/signup")}>
                   Start Your Free Trial <ArrowRight className="h-4 w-4" />
                 </Button>
                 <p className="text-sm text-gray-500 mt-2">No credit card required. Start with 10 free leads.</p>
@@ -284,20 +217,15 @@ const Index = () => {
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold text-center mb-12 text-black">How It Works</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {features.map((feature, index) => (
-                <div 
-                  key={index}
-                  className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col items-center text-center hover:shadow-md transition-shadow"
-                  onClick={() => navigate(`/feature/${feature.title.toLowerCase().replace(' ', '-')}`)}
-                  style={{ cursor: 'pointer' }}
-                >
+              {features.map((feature, index) => <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col items-center text-center hover:shadow-md transition-shadow" onClick={() => navigate(`/feature/${feature.title.toLowerCase().replace(' ', '-')}`)} style={{
+              cursor: 'pointer'
+            }}>
                   <div className="mb-4">
                     {feature.icon}
                   </div>
                   <h3 className="text-xl font-semibold mb-2 text-black">{feature.title}</h3>
                   <p className="text-gray-600">{feature.description}</p>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
         </section>
@@ -310,21 +238,12 @@ const Index = () => {
               Start generating personalized emails based on rich company data today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-white border-white hover:bg-white hover:text-black"
-                onClick={() => navigate("/signup")}
-              >
+              <Button size="lg" variant="outline" onClick={() => navigate("/signup")} className="border-white hover:bg-white text-slate-600">
                 Start Free Trial
               </Button>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    className="text-white border-white hover:bg-white hover:text-black"
-                  >
+                  <Button variant="outline" size="lg" className="border-white hover:bg-white text-slate-700">
                     <Calendar className="h-4 w-4 mr-2" /> Schedule Demo
                   </Button>
                 </PopoverTrigger>
@@ -367,27 +286,18 @@ const Index = () => {
             </div>
           </div>
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-center gap-4">
-            <Button 
-              onClick={() => {
-                setShowPromo(false);
-                navigate("/signup");
-              }}
-              className="w-full sm:w-auto bg-gold hover:bg-gold/90 text-black"
-            >
+            <Button onClick={() => {
+            setShowPromo(false);
+            navigate("/signup");
+          }} className="w-full sm:w-auto bg-gold hover:bg-gold/90 text-black">
               Claim My 15 Free Leads
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPromo(false)}
-              className="w-full sm:w-auto text-gray-500 hover:text-gray-700"
-            >
+            <Button variant="outline" onClick={() => setShowPromo(false)} className="w-full sm:w-auto text-gray-500 hover:text-gray-700">
               I'll Pass
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
