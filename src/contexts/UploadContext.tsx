@@ -1,9 +1,7 @@
-
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
-import { ApiClient } from "@/utils/apiClient";
+import React, { createContext, useContext, useState } from 'react';
+import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/contexts/AuthContext';
 
 type UploadResults = any[];
 
@@ -34,7 +32,6 @@ export const UploadProvider = ({
   const [notionUrl, setNotionUrl] = useState("");
   const [airtableUrl, setAirtableUrl] = useState("");
 
-  // Function to enrich a company using the Supabase edge function
   const enrichCompany = async (companyData: {
     company_name: string;
     website?: string;
@@ -72,7 +69,6 @@ export const UploadProvider = ({
     setIsLoading(true);
     
     try {
-      // If using sample data (no file selected and no URLs)
       if (!selectedFile && !notionUrl && !airtableUrl) {
         toast.info("Getting sample data from OpenAI...");
         
@@ -89,7 +85,6 @@ export const UploadProvider = ({
           console.error("Error processing sample data:", error);
           toast.error("Failed to process sample data with AI. Falling back to basic sample.");
           
-          // Fallback to basic sample if AI fails
           const basicSample = {
             company_name: "Sample Corp",
             website: "samplecorp.com",
@@ -123,9 +118,7 @@ Best regards,
         return;
       }
       
-      // Process actual file upload
       if (selectedFile) {
-        // Read the file content
         const reader = new FileReader();
         
         reader.onload = async (e) => {
@@ -138,7 +131,6 @@ Best regards,
             console.log("File content type:", typeof fileContent);
             console.log("File content preview:", String(fileContent).substring(0, 200));
 
-            // Improved CSV parsing
             const lines = String(fileContent).split(/\r?\n/);
             console.log(`Found ${lines.length} lines in the file`);
             
@@ -146,7 +138,6 @@ Best regards,
               throw new Error("File contains insufficient data (needs header row + at least one data row)");
             }
             
-            // Get headers - handle both comma and semicolon delimiters
             let delimiter = ',';
             if (lines[0].includes(';')) {
               delimiter = ';';
@@ -155,16 +146,15 @@ Best regards,
             const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
             console.log("Detected headers:", headers);
             
-            // Extract company data from file
             const companiesData = [];
             let validCompaniesFound = false;
             
             for (let i = 1; i < lines.length; i++) {
               const line = lines[i].trim();
-              if (!line) continue; // Skip empty lines
+              if (!line) continue;
               
               const values = line.split(delimiter).map(v => v.trim());
-              if (values.length < 2) continue; // Skip lines with insufficient data
+              if (values.length < 2) continue;
               
               const company: Record<string, string> = {};
               
@@ -174,9 +164,7 @@ Best regards,
                 }
               });
               
-              // Determine company name with more flexibility
               let companyName = '';
-              // Try standard field names for company name
               const possibleNameFields = ['company_name', 'company', 'name', 'organization', 'business', 'corp', 'corporation'];
               
               for (const field of possibleNameFields) {
@@ -186,7 +174,6 @@ Best regards,
                 }
               }
               
-              // If we still don't have a name, use first non-empty field as fallback
               if (!companyName) {
                 const firstNonEmptyKey = Object.keys(company).find(key => company[key] && company[key].length > 1);
                 if (firstNonEmptyKey) {
@@ -198,7 +185,6 @@ Best regards,
               if (companyName) {
                 validCompaniesFound = true;
                 
-                // Get website and other info
                 const website = company.website || company.url || company.site || "";
                 const industry = company.industry || company.sector || company.vertical || "";
                 const size = company.size || company.employees || company.employee_count || "";
@@ -220,23 +206,18 @@ Best regards,
               throw new Error("No valid company data found in file. Please ensure your file has headers and company information.");
             }
 
-            // Process each company with AI enrichment
-            toast.info(`Enriching data for ${companiesData.length} companies...`);
-
             const enrichedResults = [];
-            const batchSize = 3; // Process in smaller batches to avoid overwhelming API
+            const batchSize = 3;
             
             for (let i = 0; i < companiesData.length; i += batchSize) {
               const batch = companiesData.slice(i, i + batchSize);
               
-              // Process batch in parallel
               const batchPromises = batch.map(async (company) => {
                 try {
                   toast.info(`Researching: ${company.company_name}`);
                   return await enrichCompany(company);
                 } catch (error) {
                   console.error(`Error enriching ${company.company_name}:`, error);
-                  // Return basic info if enrichment fails
                   return {
                     company_name: company.company_name,
                     website: company.website || "",
@@ -259,7 +240,6 @@ Best regards,
               const batchResults = await Promise.all(batchPromises);
               enrichedResults.push(...batchResults);
               
-              // Update progress
               toast.info(`Processed ${Math.min((i + batchSize), companiesData.length)} of ${companiesData.length} companies`);
             }
             
@@ -283,7 +263,6 @@ Best regards,
         reader.readAsText(selectedFile);
         
       } else if (notionUrl) {
-        // Handle Notion URL
         toast.info("Processing Notion database...");
         
         try {
@@ -305,7 +284,6 @@ Best regards,
         }
         
       } else if (airtableUrl) {
-        // Handle Airtable URL
         toast.info("Processing Airtable base...");
         
         try {
