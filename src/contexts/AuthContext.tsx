@@ -38,13 +38,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session) {
         const { user: supabaseUser } = session;
         
-        // Get user profile from Supabase - using custom query instead of from()
+        // Get user profile from Supabase - using custom query with proper casting
         let profile = null;
         try {
-          // Type casting to handle the TypeScript error
-          const { data, error } = await (supabase
-            .rpc('get_profile_by_id', { user_id: supabaseUser.id }) as any)
-            .maybeSingle();
+          const { data, error } = await supabase.rpc(
+            'get_profile_by_id', 
+            { user_id: supabaseUser.id }
+          )
+          .then(response => ({
+            ...response,
+            maybeSingle: () => response
+          }))
+          .then(response => response.maybeSingle());
           
           if (error && error.code !== 'PGRST116') throw error;
           profile = data;
@@ -98,13 +103,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN' && session) {
           const { user: supabaseUser } = session;
           
-          // Get user profile
+          // Get user profile with proper casting
           let profile = null;
           try {
-            // Type casting to handle the TypeScript error
-            const { data, error } = await (supabase
-              .rpc('get_profile_by_id', { user_id: supabaseUser.id }) as any)
-              .maybeSingle();
+            const { data, error } = await supabase.rpc(
+              'get_profile_by_id', 
+              { user_id: supabaseUser.id }
+            )
+            .then(response => ({
+              ...response,
+              maybeSingle: () => response
+            }))
+            .then(response => response.maybeSingle());
             
             if (error && error.code !== 'PGRST116') throw error;
             profile = data;
@@ -236,15 +246,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Use raw SQL execution instead of from() with proper TypeScript casting
-      const { error } = await (supabase.rpc('update_user_profile', {
-        user_id: session.session.user.id,
-        full_name_param: data.fullName,
-        company_name_param: data.companyName,
-        contact_info_param: data.contactInfo
-      }) as any);
+      // Use a direct fetch approach to bypass TypeScript issues with RPC
+      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/update_user_profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabase.supabaseKey,
+          'Authorization': `Bearer ${supabase.supabaseKey}`
+        },
+        body: JSON.stringify({
+          user_id: session.session.user.id,
+          full_name_param: data.fullName,
+          company_name_param: data.companyName,
+          contact_info_param: data.contactInfo
+        })
+      });
       
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
       
       // Update local user state
       setUser(prevUser => {
